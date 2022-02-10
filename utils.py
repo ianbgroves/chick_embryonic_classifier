@@ -7,6 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1fsLDLXEpeCXby6m0SrWiUc3SGu41Vspu
 """
 
+
 import tensorflow as tf  # version 2.5
 from tensorflow import keras
 from tensorflow.keras.layers import LeakyReLU, Softmax
