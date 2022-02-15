@@ -59,6 +59,14 @@ from sklearn.cluster import KMeans
 import seaborn as sns
 sns.set_theme(style="white")
 
+#resnet50 imports
+from tensorflow.keras.applications.resnet50 import ResNet50
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.resnet50 import preprocess_input
+
+#inceptionv3 imports
+from tensorflow.keras.applications.inception_v3 import InceptionV3
+from tensorflow.keras.applications.inception_v3 import preprocess_input as preprocess_inception
 
 
 def k_fold_splitter(split_aug, k):
@@ -284,12 +292,14 @@ def aug_randcomb(split):
             split_aug.append([feature2, label])
   return split_aug
 
-def create_training_data():
+def create_training_data(imformat, duplicate_channels):
   tdata = []
   for img in os.listdir('labeled_data/10_1'):  # iterate over each image
       try:
-          img_array = Image.open('labeled_data/10_1/{}'.format(img)).convert('L')
+          img_array = Image.open('labeled_data/10_1/{}'.format(img)).convert(imformat)
           img_array = ImageOps.equalize(img_array, mask= None)
+          if duplicate_channels:
+            img_array = img_array.convert('RGB')                 
           img_array = img_array.resize((200,200), Image.ANTIALIAS)
           img_array = np.array(img_array)
           tdata.append([img_array, 0])
@@ -297,8 +307,10 @@ def create_training_data():
           pass
   for img in os.listdir('labeled_data/10_2'):  # iterate over each image
       try:
-          img_array = Image.open('labeled_data/10_2/{}'.format(img)).convert('L') 
+          img_array = Image.open('labeled_data/10_2/{}'.format(img)).convert(imformat) 
           img_array = ImageOps.equalize(img_array, mask= None)
+          if duplicate_channels:
+            img_array = img_array.convert('RGB')                 
           img_array = img_array.resize((200,200), Image.ANTIALIAS)
           img_array = np.array(img_array)
           tdata.append([img_array, 1])
@@ -306,8 +318,10 @@ def create_training_data():
           pass
   for img in os.listdir('labeled_data/10_3'):  # iterate over each image
       try:
-          img_array = Image.open('labeled_data/10_3/{}'.format(img)).convert('L') 
+          img_array = Image.open('labeled_data/10_3/{}'.format(img)).convert(imformat) 
           img_array = ImageOps.equalize(img_array, mask= None)
+          if duplicate_channels:
+            img_array = img_array.convert('RGB')             
           img_array = img_array.resize((200,200), Image.ANTIALIAS)
           img_array = np.array(img_array)
           tdata.append([img_array, 2])
@@ -461,7 +475,7 @@ def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False
         exit()
   return baseline, cutout, shear, gblur, crop, randcomb, mobius
 
-def aug_mobius(split, M, mode, user_defined):
+def aug_mobius(split, M, mode, user_defined, rgb):
   split_aug = []
   start_points = 32, 16, 16, 32, 32, 48 
   end_points = 16, 32, 32, 48, 48, 32
@@ -470,7 +484,7 @@ def aug_mobius(split, M, mode, user_defined):
   for feature, label in split:
     feature, uninterpolated_feature = mobius_fast_interpolation('example', True, feature,
                                                               M, 
-                                                              mode = mode,
+                                                              mode = mode, rgb = rgb, 
                                                               output_height=200, 
                                                               output_width=200,
                                                               user_defined=user_defined,
@@ -494,38 +508,8 @@ def aug_rot(split):
       split_aug.append([feature, label])
   return split_aug
 
-def create_training_data():
-  tdata = []
-  for img in os.listdir('labeled_data/10_1'):  # iterate over each image
-      try:
-          img_array = Image.open('labeled_data/10_1/{}'.format(img)).convert('L')
-          img_array = ImageOps.equalize(img_array, mask= None)
-          img_array = img_array.resize((200,200), Image.ANTIALIAS)
-          img_array = np.array(img_array)
-          tdata.append([img_array, 0])
-      except Exception as e:  
-          pass
-  for img in os.listdir('labeled_data/10_2'):  # iterate over each image
-      try:
-          img_array = Image.open('labeled_data/10_2/{}'.format(img)).convert('L') 
-          img_array = ImageOps.equalize(img_array, mask= None)
-          img_array = img_array.resize((200,200), Image.ANTIALIAS)
-          img_array = np.array(img_array)
-          tdata.append([img_array, 1])
-      except Exception as e:  
-          pass
-  for img in os.listdir('labeled_data/10_3'):  # iterate over each image
-      try:
-          img_array = Image.open('labeled_data/10_3/{}'.format(img)).convert('L') 
-          img_array = ImageOps.equalize(img_array, mask= None)
-          img_array = img_array.resize((200,200), Image.ANTIALIAS)
-          img_array = np.array(img_array)
-          tdata.append([img_array, 2])
-      except Exception as e:  
-          pass
-  return tdata
 
-def train_model(train, val, name):
+def train_model_inceptionv3(train, val, name):
   from datetime import date as dt
   seed(1234)
   shuffle(train)
@@ -549,65 +533,36 @@ def train_model(train, val, name):
   X_train = np.array(X_train) / 255
   X_val = np.array(X_val) / 255
 
-  X_train = X_train.reshape(X_train.shape[0], 200, 200, 1)
-  X_val = X_val.reshape(X_val.shape[0], 200, 200, 1)
+  X_train = preprocess_inception(X_train)
+  X_val = preprocess_inception(X_val)
+  
+  y_train=to_categorical(y_train)
+  y_val=to_categorical(y_val)
 
-  X_train.astype('float32')
-  X_val.astype('float32')
   print('X_train shape:', np.shape(X_train))
   print('X_val shape:', np.shape(X_val))
 
-
-  y_train=to_categorical(y_train)
-  y_val=to_categorical(y_val)
   print('y_train shape:', np.shape(y_train))
   print('y_val shape:', np.shape(y_val))
 
-  layer_drop = 0.2
-  final_drop = 0.5
-  activation = 'relu'
-  lamda = 0.0001
 
-  model = Sequential([
-    layers.Conv2D(16, 3, padding='same', activation= activation, input_shape = (200, 200, 1), kernel_regularizer=regularizers.l2(lamda)),
-    layers.Dropout(layer_drop),
-    layers.MaxPooling2D((2,2), padding='same'),
-    layers.Conv2D(32, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
-    layers.Dropout(layer_drop),
-    layers.MaxPooling2D((2,2), padding='same'),
-    layers.Conv2D(64, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
-    layers.Dropout(layer_drop),
-    layers.MaxPooling2D((2,2), padding='same'),
-    layers.Conv2D(128, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
-    layers.Dropout(layer_drop),
-    layers.MaxPooling2D((2,2), padding='same'),
-    layers.Conv2D(256, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
-    layers.Dropout(layer_drop),
-    layers.MaxPooling2D((2,2), padding='same'),
-    layers.Conv2D(512, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
-    layers.Dropout(layer_drop),
-    layers.MaxPooling2D((2,2), padding='same'),
-    layers.Conv2D(1024, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
-    layers.Dropout(layer_drop),
-    layers.MaxPooling2D((2,2), padding='same'),
-    layers.Flatten(),
-    layers.Dense(1024, activation=activation),
-    layers.Dropout(final_drop),
-    layers.Dense(3, activation = 'softmax')
-  ])
-
-  model.compile(optimizer = Adam(learning_rate = 0.0001),
+  inception_model = InceptionV3(include_top=False, weights=None, input_tensor=None, input_shape=(200, 200, 3), pooling=None)
+  flattened_output = tf.keras.layers.Flatten()(inception_model.output)
+  fc_classification_layer = tf.keras.layers.Dense(3, activation='softmax')(flattened_output)
+  model = tf.keras.models.Model(inputs=inception_model.input, outputs = fc_classification_layer)
+  model.compile(optimizer = Adam(learning_rate = 0.00001),
                 loss = 'categorical_crossentropy',
                 metrics = ['accuracy'])
 
-  earlyStop = EarlyStopping(monitor = 'val_accuracy', min_delta = 0.01, patience = 10, mode='auto', restore_best_weights=True)
+  early_stop = EarlyStopping(monitor = 'val_accuracy', min_delta = 0.01, patience = 10, mode='auto', restore_best_weights=True)
   epochs = 50
+  
   history = model.fit(x=X_train,
                       y=y_train,
                       epochs=epochs,
                       batch_size=32,
                       validation_data=(X_val, y_val),
-                      callbacks=[earlyStop])
+                      callbacks=[early_stop])
 
 
 
@@ -619,12 +574,88 @@ def train_model(train, val, name):
 
   today = dt.today()
   date = today.strftime("%b-%d-%Y")
-  model.save(model_path + name + '{}'.format(date))
+  model.save('new_models_dec_2021/' + name + '{}'.format(date))
 
   del model
   K.clear_session()
 
   return round(max(val_acc)*100, 1)
+
+
+def train_model_resnet50(train, val, name):
+  from datetime import date as dt
+  seed(1234)
+  shuffle(train)
+  shuffle(val)
+
+  # Preprocessing the data into X_train etc with relevant input shapes
+  X_train = []
+  y_train = []
+  X_val = []
+  y_val = []
+  img_size = 200
+
+  for i in train:
+    for feature, label in i:
+      X_train.append(feature)
+      y_train.append(label)
+  for feature, label in val:
+    X_val.append(feature)
+    y_val.append(label)
+
+  X_train = np.array(X_train) / 255
+  X_val = np.array(X_val) / 255
+
+  X_train = preprocess_input(X_train)
+  X_val = preprocess_input(X_val)
+  
+  y_train=to_categorical(y_train)
+  y_val=to_categorical(y_val)
+
+  print('X_train shape:', np.shape(X_train))
+  print('X_val shape:', np.shape(X_val))
+
+  print('y_train shape:', np.shape(y_train))
+  print('y_val shape:', np.shape(y_val))
+
+
+
+  resnet50_model = ResNet50(include_top=False, weights=None, input_tensor=None, input_shape=(200, 200, 3), pooling=None)
+  flattened_output = tf.keras.layers.Flatten()(resnet50_model.output)
+  fc_classification_layer = tf.keras.layers.Dense(3, activation='softmax')(flattened_output)
+  model = tf.keras.models.Model(inputs=resnet50_model.input, outputs = fc_classification_layer)
+  model.compile(optimizer = Adam(learning_rate = 0.00001),
+                loss = 'categorical_crossentropy',
+                metrics = ['accuracy'])
+
+  early_stop = EarlyStopping(monitor = 'val_accuracy', min_delta = 0.01, patience = 10, mode='auto', restore_best_weights=True)
+  epochs = 50
+
+  
+  history = model.fit(x=X_train,
+                      y=y_train,
+                      epochs=epochs,
+                      batch_size=32,
+                      validation_data=(X_val, y_val),
+                      callbacks=[early_stop])
+
+
+
+  acc = history.history['accuracy']
+  val_acc = history.history['val_accuracy']
+  loss = history.history['loss']
+  val_loss = history.history['val_loss']
+  accuracy = history.history['val_accuracy'][-1]
+
+  today = dt.today()
+  date = today.strftime("%b-%d-%Y")
+  model.save('new_models_dec_2021/' + name + '{}'.format(date))
+
+  del model
+  K.clear_session()
+
+  return round(max(val_acc)*100, 1)
+  
 
 def parse_args():
   import argparse
@@ -679,7 +710,7 @@ def shift_func(coords,a,b,c,d):
     #take the color along for the ride
     return real(w),imag(w),coords[2]
 
-def mobius_fast_interpolation(name, save, image, M, mode, output_height=None, output_width=None, user_defined=False, start_points = None, end_points = None):
+def mobius_fast_interpolation(name, save, image, M, mode, rgb, output_height=None, output_width=None, user_defined=False, start_points = None, end_points = None):
     image = np.array(image)
     original_image=image
     height=image.shape[0]
@@ -754,8 +785,10 @@ def mobius_fast_interpolation(name, save, image, M, mode, output_height=None, ou
 
     new_image=Image.fromarray(r_interpolated)
     uninterpolated_image=Image.fromarray(r)
-    new_image = new_image.convert("L")
-
+    if not rgb:
+        new_image = new_image.convert("L")
+        return new_image, uninterpolated_image
+    
     return new_image, uninterpolated_image
 
 
@@ -856,36 +889,6 @@ def madmissable_abcd(M,height,width):
     
     return a, b, c, d, original_points, new_points
 
-def create_training_data_mobius():
-  tdata = []
-  for img in os.listdir('labeled_data/10_1'):  # iterate over each image
-      try:
-          img_array = Image.open('labeled_data/10_1/{}'.format(img)).convert('RGB')
-          img_array = ImageOps.equalize(img_array, mask= None)
-          img_array = img_array.resize((200,200), Image.ANTIALIAS)
-          img_array = np.array(img_array)
-          tdata.append([img_array, 0])
-      except Exception as e:  
-          pass
-  for img in os.listdir('labeled_data/10_2'):  # iterate over each image
-      try:
-          img_array = Image.open('labeled_data/10_2/{}'.format(img)).convert('RGB') 
-          img_array = ImageOps.equalize(img_array, mask= None)
-          img_array = img_array.resize((200,200), Image.ANTIALIAS)
-          img_array = np.array(img_array)
-          tdata.append([img_array, 1])
-      except Exception as e:  
-          pass
-  for img in os.listdir('labeled_data/10_3'):  # iterate over each image
-      try:
-          img_array = Image.open('labeled_data/10_3/{}'.format(img)).convert('RGB') 
-          img_array = ImageOps.equalize(img_array, mask= None)
-          img_array = img_array.resize((200,200), Image.ANTIALIAS)
-          img_array = np.array(img_array)
-          tdata.append([img_array, 2])
-      except Exception as e:  
-          pass
-  return tdata
   
 def create_training_data_k_means():
 
