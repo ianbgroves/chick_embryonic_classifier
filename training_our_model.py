@@ -7,7 +7,7 @@ from random import seed, shuffle
 import numpy as np
 from imgaug import augmenters as iaa
 
-from utils import k_fold_splitter, create_training_data, aug_rot, aug_crop, aug_cutout, aug_shear, aug_gblur, aug_randcomb, train_model, read_args, aug_mobius, shift_func, mobius_fast_interpolation, getabcd_1fix, M_admissable, madmissable_abcd, create_training_data_mobius
+from utils import k_fold_splitter, create_training_data, aug_rot, aug_crop, aug_cutout, aug_shear, aug_gblur, aug_randcomb, train_model, read_args, aug_mobius, shift_func, mobius_fast_interpolation, getabcd_1fix, M_admissable, madmissable_abcd
 
 baseline = False
 cutout = False
@@ -46,7 +46,7 @@ print(image_count)
 
 baseline, cutout, shear, gblur, crop, randcomb, mobius = read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False, randcomb=False, mobius=False)
 
-tdata = create_training_data()
+tdata = create_training_data(imformat="L", duplicate_channels=False)
 seed(123)
 shuffle(tdata)
 k=10
@@ -101,7 +101,7 @@ if mobius:
 
   # mobius method uses RGB images, and then converts to grayscale as the final step
 
-  tdata = create_training_data_mobius()
+  tdata = create_training_data(imformat="L", duplicate_channels=False)
   seed(123)
   shuffle(tdata)
   k=10
@@ -109,7 +109,7 @@ if mobius:
 
   for i in range(0, k):
     split_data.append(tdata[int(round(len(tdata)*((i)/k), 0)):int(round(len(tdata)*((i+1)/k), 0))])
-    split_aug_data.append(aug_mobius(split_data[i], M=2, mode='wrap', user_defined=False))   # M must be > 1, and this is slower the closer to that
+    split_aug_data.append(aug_mobius(split_data[i], M=2, mode='wrap', user_defined=False, rgb=False))   # M must be > 1, and this is slower the closer to that
     split_mobius_data.append(aug_rot(split_aug_data[i]))
   
   val_list, training_list = k_fold_splitter(split_mobius_data, k)
