@@ -23,6 +23,7 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import Sequential
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras import regularizers
+
 import imgaug as ia
 import numpy as np
 import matplotlib
@@ -49,6 +50,16 @@ from random import random, seed, shuffle
 from scipy.ndimage import geometric_transform
 from scipy.ndimage import map_coordinates
 from PIL import Image, ImageOps
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+import matplotlib.ticker as plticker
+import matplotlib as mpl
+from sklearn.cluster import KMeans
+import seaborn as sns
+sns.set_theme(style="white")
+
+
 
 def k_fold_splitter(split_aug, k):
 
@@ -875,3 +886,201 @@ def create_training_data_mobius():
       except Exception as e:  
           pass
   return tdata
+  
+def create_training_data_k_means():
+
+  tdata = []
+  tlabel = []
+  for img in os.listdir('labeled_data/10_1'):  # iterate over each image
+      try:
+          img_array = cv2.imread('labeled_data/10_1/{}'.format(img), cv2.IMREAD_GRAYSCALE) 
+          tdata.append(cv2.resize(img_array, (200, 200)))
+          tlabel.append(0)
+      except Exception as e:  
+          pass
+
+  for img in os.listdir('labeled_data/10_2'):  # iterate over each image
+      try:
+          img_array = cv2.imread('labeled_data/10_2/{}'.format(img), cv2.IMREAD_GRAYSCALE) 
+          tdata.append(cv2.resize(img_array, (200, 200)))
+          tlabel.append(1)
+      except Exception as e:  
+          pass
+
+  for img in os.listdir('labeled_data/10_3'):  # iterate over each image
+      try:
+          img_array = cv2.imread('labeled_data/10_3/{}'.format(img), cv2.IMREAD_GRAYSCALE) 
+          tdata.append(cv2.resize(img_array, (200, 200)))
+          tlabel.append(2)
+      except Exception as e:  
+          pass
+  return tdata, tlabel
+
+def reshape_and_normalize(X, Y, nb_classes):
+  
+  X = np.array(X).reshape(-1, 200, 200, 1) # Array containing every pixel as an index (1D array - 40,000 long)
+  X_train = np.array(X)
+  Y_train = np.array(Y)
+  print ("The shape of X is " + str(X_train.shape))
+  print ("The shape of y is " + str(Y_train.shape)) # This is only used to check our clustering
+
+  # Data Normalization
+
+  print(X_train.min()) # Should be 0
+  print(X_train.max()) # Should be 255
+
+  # Conversion to float
+
+  X_train = X_train.astype('float32') 
+
+  # Normalization
+
+  X_train = X_train/255.0
+
+  print(X_train.min()) # Should be 0
+  print(X_train.max()) # Should be 1.0
+
+  #check that X has been correctly split into train and test sets
+  print('X_train shape:', X_train.shape)
+  print(X_train.shape[0], 'train samples')
+
+  # convert class vectors to binary class matrices with one-hot encoding
+
+  Y_train = to_categorical(Y_train, nb_classes)
+  return X_train, Y_train
+
+def scree_plot(pca):
+
+
+  import matplotlib.ticker as plticker
+
+  xloc = plticker.MultipleLocator(base=1.0) # this locator puts ticks at regular intervals
+  yloc = plticker.MultipleLocator(base=100000) # this locator puts ticks at regular intervals
+
+  fig, ax = plt.subplots()
+  PC_values = np.arange(pca.n_components_) + 1
+  ax.plot(PC_values, pca.explained_variance_ratio_, color='red', linewidth=2.0)
+  ax.xaxis.set_major_locator(xloc)
+  ax.set_ylim(0,(round(max(pca.explained_variance_ratio_))))
+
+  plt.xlabel('PC')
+  plt.ylabel('Variance')
+  plt.savefig(os.getcwd() + '/scree.png')
+
+  print ("Proportion of Variance Explained : ", np.round(pca.explained_variance_ratio_, 2))  
+      
+  out_sum = np.cumsum(np.round(pca.explained_variance_ratio_, 2))
+  print ("Cumulative Prop. Variance Explained: ", out_sum)
+
+def fit_PCA(X_train, n_components):
+    
+  X = X_train.reshape(-1,X_train.shape[1]*X_train.shape[2]) 
+  scaler = StandardScaler()
+
+  pca = PCA(n_components)
+  pca_fit = pca.fit(X) #fit the data according to our PCA instance
+
+  print("Number of components before PCA  = " + str(X.shape[1]))
+  print("Number of components after PCA 2 = " + str(pca.n_components_)) 
+  
+  #dimension reduced from 40000 to 2
+  scores_pca = pca.transform(X)
+  return pca, pca_fit, scores_pca
+
+def elbow_plot(PCA_components):
+
+  xloc = plticker.MultipleLocator(base=1.0) # this locator puts ticks at regular intervals
+  yloc = plticker.MultipleLocator(base=100000) # this locator puts ticks at regular intervals
+
+  wcss = []
+
+  for i in range(1,11): 
+    kmeans = KMeans(n_clusters=i, init ='k-means++', max_iter=300,  n_init=10, random_state=0 )
+    kmeans.fit(PCA_components)
+    wcss.append(kmeans.inertia_)
+
+  fig, ax = plt.subplots()
+  ax.plot(range(1,11),wcss, color= 'darkcyan', linewidth = 2.0)
+  ax.xaxis.set_major_locator(xloc)
+  ax.yaxis.set_major_locator(yloc)
+  ax.set_ylim(0,(round(max(wcss), -5)))
+  ax.set_xlabel('k')
+  ax.set_ylabel('WCSS')
+  ax.axes.ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
+
+  plt.savefig(os.getcwd() + '/elbow.png')
+
+def fit_k_means(PCA_components, Y_train, number_of_clusters):
+
+  kmeans = KMeans(n_clusters=number_of_clusters, init ='k-means++', max_iter=300, n_init=10,random_state=0)
+  kmeans.fit(PCA_components)
+  k_means_labels = kmeans.labels_ #List of labels of each dataset
+
+  unique_labels = len(np.unique(k_means_labels)) 
+
+  #2D matrix  for an array of indexes of the given label
+  cluster_index= [[] for i in range(unique_labels)]
+  for i, label in enumerate(k_means_labels,0):
+      for n in range(unique_labels):
+
+          if label == n:
+              cluster_index[n].append(i)
+          else:
+              continue
+  Y_clust = [[] for i in range(unique_labels)]
+  for n in range(unique_labels):
+
+      Y_clust[n] = Y_train[cluster_index[n]] #Y_clust[0] contains array of "correct" category from y_train for the cluster_index[0]
+      assert(len(Y_clust[n]) == len(cluster_index[n])) #dimension confirmation
+
+
+  for i in range(0, len(Y_clust)):
+    for j in range(0, len(Y_clust[i])):
+      if Y_clust[i][j][0] != 0.0:
+        Y_clust[i][j][0] = 1.0
+      elif Y_clust[i][j][1] != 0.0:
+        Y_clust[i][j][1] = 2.0
+      elif Y_clust[i][j][2] != 0.0:
+        Y_clust[i][j][2] = 3.0
+  return kmeans, k_means_labels, Y_clust, unique_labels
+  
+def counter(cluster):
+    unique, counts = np.unique(cluster, return_counts=True)
+    label_index = dict(zip(unique[1:4], counts[1:4]))
+    return label_index
+
+def plotter(label_dict, class_names):
+
+    plt.bar(range(len(label_dict)), list(label_dict.values()), align='center', width=0.8, edgecolor='black', linewidth=1, color='darkgreen')
+    a = []
+    for i in [*label_dict]: a.append(class_names[i])
+    plt.xticks(range(len(label_dict)), list(a), rotation=0, rotation_mode='anchor')
+    plt.yticks()
+    plt.xlabel('Sub-stage')
+    plt.ylabel('Count')
+
+def plot_counts(label_count):
+
+  class_names = {1: '10.1', 2: '10.2', 3: '10.3'}
+  #Bar graph with the number of items of different categories clustered in it
+  plt.figure()
+  plt.subplots_adjust(wspace = 0.8)
+  mpl.rcParams['axes.linewidth'] = 2
+  for i in range (1,4):
+      plt.subplot(3, 3, i)
+      plotter(label_count[i-1], class_names) 
+      plt.title("Cluster " + str(i))
+  plt.savefig(os.getcwd() + '/counts.png')
+
+def plot_scatter(k_means_labels, kmeans, PCA_components):
+  plt.clf()
+  plt.figure()
+
+  ax = sns.scatterplot(PCA_components[0], PCA_components[1], hue=k_means_labels, palette = ['orange', 'blue', 'green'])
+  ax = sns.scatterplot(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], color= 'r', s = 100)
+
+  ax.set_ylabel('PC 2', fontsize = 14)
+  ax.set_xlabel('PC 1', fontsize = 14)
+
+  plt.tick_params(axis='both',which='both', bottom=False, top = False, labelbottom=False, labelleft=False)
+  plt.savefig(os.getcwd() + '/scatter.png')
