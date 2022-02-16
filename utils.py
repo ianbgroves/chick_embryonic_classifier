@@ -93,7 +93,7 @@ def aug_shear(split):
   split_aug = []
   for feature, label in split:
     for angle in np.arange(0, 360, 10):
-      feature = cv2.equalizeHist(feature)
+      # feature = cv2.equalizeHist(feature)
       shear = iaa.ShearX(20)
       rotate = iaa.geometric.Affine(rotate = angle)
       feature = rotate(image = feature)
@@ -102,11 +102,11 @@ def aug_shear(split):
       split_aug.append([feature2, label])
       return split_aug
 
-def aug_gblur(split):
+def aug_g_blur(split):
   split_aug = []
   for feature, label in split:
     for angle in np.arange(0, 360, 10):
-        feature = cv2.equalizeHist(feature)
+        # feature = cv2.equalizeHist(feature)
         gblur = iaa.GaussianBlur(sigma = 5)
         feature2 = gblur(image = feature)
         rotate = iaa.geometric.Affine(rotate = angle)
@@ -120,7 +120,7 @@ def aug_cutout(split):
   split_aug = []
   for feature, label in split:
     for angle in np.arange(0, 360, 10):
-        feature = cv2.equalizeHist(feature)
+        # feature = cv2.equalizeHist(feature)
         cutout = iaa.Cutout()
         feature2 = cutout(image = feature)
         feature3 = cutout(image = feature)
@@ -137,13 +137,13 @@ def aug_crop(split):
   split_aug = []
   for feature, label in split:
     for percent in np.arange(0, 0.3, 0.01):
-        feature = cv2.equalizeHist(feature)
+        # feature = cv2.equalizeHist(feature)
         crop = iaa.Crop(percent = percent)
         feature = crop(image = feature)
         split_aug.append([feature, label])
         return split_aug
 
-def aug_randcomb(split):
+def aug_rand_comb(split):
   split_aug = []
   gblurstr, cutoutstr, shearstr = 'gblurstr', 'cutoutstr', 'shearstr'
   choices = [gblurstr, cutoutstr, shearstr]
@@ -153,7 +153,7 @@ def aug_randcomb(split):
         #do rotation and cutout
         print('doing cutout')
         for angle in np.arange(0, 360, 10):
-            feature = cv2.equalizeHist(feature)
+            # feature = cv2.equalizeHist(feature)
             cutout = iaa.Cutout()
             feature2 = cutout(image = feature)
             feature3 = cutout(image = feature)
@@ -168,7 +168,7 @@ def aug_randcomb(split):
         #do rotation and gblur
         print('doing gblur')
         for angle in np.arange(0, 360, 10):
-            feature = cv2.equalizeHist(feature)
+            # feature = cv2.equalizeHist(feature)
             gblur = iaa.GaussianBlur(sigma = 5)
             feature2 = gblur(image = feature)
             rotate = iaa.geometric.Affine(rotate = angle)
@@ -180,110 +180,7 @@ def aug_randcomb(split):
         #do rotation and shear
         print('doing shear')
         for angle in np.arange(0, 360, 10):
-            feature = cv2.equalizeHist(feature)
-            shear = iaa.ShearX(20)
-            rotate = iaa.geometric.Affine(rotate = angle)
-            feature = rotate(image = feature)
-            feature2 = shear(image = rotate(image = feature))
-            split_aug.append([feature, label])
-            split_aug.append([feature2, label])
-            return split_aug
-
-def aug_rot(split):
-  split_aug = []
-  for feature, label in split:
-    for angle in np.arange(0, 360, 10):
-      rotate = iaa.geometric.Affine(rotate = angle)
-      feature = rotate(image = feature)
-      split_aug.append([feature, label])
-  return split_aug
-
-def aug_shear(split):
-  split_aug = []
-  for feature, label in split:
-    for angle in np.arange(0, 360, 10):
-      shear = iaa.ShearX(20)
-      rotate = iaa.geometric.Affine(rotate = angle)
-      feature = rotate(image = feature)
-      feature2 = shear(image = rotate(image = feature))
-      split_aug.append([feature, label])
-      split_aug.append([feature2, label])
-  return split_aug
-
-def aug_gblur(split):
-  split_aug = []
-  for feature, label in split:
-    for angle in np.arange(0, 360, 10):
-        gblur = iaa.GaussianBlur(sigma = 5)
-        feature2 = gblur(image = feature)
-        rotate = iaa.geometric.Affine(rotate = angle)
-        feature = rotate(image = feature)
-        feature2 = rotate(image = feature2)
-        split_aug.append([feature, label])
-        split_aug.append([feature2, label])
-  return split_aug
-
-def aug_cutout(split):
-  split_aug = []
-  for feature, label in split:
-    for angle in np.arange(0, 360, 10):
-        #feature = cv2.equalizeHist(feature)
-        cutout = iaa.Cutout()
-        feature2 = cutout(image = feature)
-        feature3 = cutout(image = feature)
-        rotate = iaa.geometric.Affine(rotate = angle)
-        feature = rotate(image = feature)
-        feature2 = rotate(image = feature2)
-        feature3 = rotate(image = feature3)
-        split_aug.append([feature, label])
-        split_aug.append([feature2, label])
-        split_aug.append([feature3, label])
-  return split_aug
-
-def aug_crop(split):
-  split_aug = []
-  for feature, label in split:
-    for percent in np.arange(0, 0.3, 0.01):
-        crop = iaa.Crop(percent = percent)
-        feature = crop(image = feature)
-        split_aug.append([feature, label])
-  return split_aug
-
-def aug_randcomb(split):
-  split_aug = []
-  gblurstr, cutoutstr, shearstr = 'gblurstr', 'cutoutstr', 'shearstr'
-  choices = [gblurstr, cutoutstr, shearstr]
-  for feature, label in split:
-    augmentation = np.random.choice(choices)
-    if cutoutstr in augmentation:
-        #do rotation and cutout
-        print('doing cutout')
-        for angle in np.arange(0, 360, 10):
-            cutout = iaa.Cutout()
-            feature2 = cutout(image = feature)
-            feature3 = cutout(image = feature)
-            rotate = iaa.geometric.Affine(rotate = angle)
-            feature = rotate(image = feature)
-            feature2 = rotate(image = feature2)
-            feature3 = rotate(image = feature3)
-            split_aug.append([feature, label])
-            split_aug.append([feature2, label])
-            split_aug.append([feature3, label])
-    elif gblurstr in augmentation:
-        #do rotation and gblur
-        print('doing gblur')
-        for angle in np.arange(0, 360, 10):
-            gblur = iaa.GaussianBlur(sigma = 5)
-            feature2 = gblur(image = feature)
-            rotate = iaa.geometric.Affine(rotate = angle)
-            feature = rotate(image = feature)
-            feature2 = rotate(image = feature2)
-            split_aug.append([feature, label])
-            split_aug.append([feature2, label])
-    else:
-        #do rotation and shear
-        print('doing shear')
-        for angle in np.arange(0, 360, 10):
+            # feature = cv2.equalizeHist(feature)
             shear = iaa.ShearX(20)
             rotate = iaa.geometric.Affine(rotate = angle)
             feature = rotate(image = feature)
@@ -291,6 +188,109 @@ def aug_randcomb(split):
             split_aug.append([feature, label])
             split_aug.append([feature2, label])
   return split_aug
+
+# def aug_rot(split):
+  # split_aug = []
+  # for feature, label in split:
+    # for angle in np.arange(0, 360, 10):
+      # rotate = iaa.geometric.Affine(rotate = angle)
+      # feature = rotate(image = feature)
+      # split_aug.append([feature, label])
+  # return split_aug
+
+# def aug_shear(split):
+  # split_aug = []
+  # for feature, label in split:
+    # for angle in np.arange(0, 360, 10):
+      # shear = iaa.ShearX(20)
+      # rotate = iaa.geometric.Affine(rotate = angle)
+      # feature = rotate(image = feature)
+      # feature2 = shear(image = rotate(image = feature))
+      # split_aug.append([feature, label])
+      # split_aug.append([feature2, label])
+  # return split_aug
+
+# def aug_gblur(split):
+  # split_aug = []
+  # for feature, label in split:
+    # for angle in np.arange(0, 360, 10):
+        # gblur = iaa.GaussianBlur(sigma = 5)
+        # feature2 = gblur(image = feature)
+        # rotate = iaa.geometric.Affine(rotate = angle)
+        # feature = rotate(image = feature)
+        # feature2 = rotate(image = feature2)
+        # split_aug.append([feature, label])
+        # split_aug.append([feature2, label])
+  # return split_aug
+
+# def aug_cutout(split):
+  # split_aug = []
+  # for feature, label in split:
+    # for angle in np.arange(0, 360, 10):
+        # #feature = cv2.equalizeHist(feature)
+        # cutout = iaa.Cutout()
+        # feature2 = cutout(image = feature)
+        # feature3 = cutout(image = feature)
+        # rotate = iaa.geometric.Affine(rotate = angle)
+        # feature = rotate(image = feature)
+        # feature2 = rotate(image = feature2)
+        # feature3 = rotate(image = feature3)
+        # split_aug.append([feature, label])
+        # split_aug.append([feature2, label])
+        # split_aug.append([feature3, label])
+  # return split_aug
+
+# def aug_crop(split):
+  # split_aug = []
+  # for feature, label in split:
+    # for percent in np.arange(0, 0.3, 0.01):
+        # crop = iaa.Crop(percent = percent)
+        # feature = crop(image = feature)
+        # split_aug.append([feature, label])
+  # return split_aug
+
+# def aug_randcomb(split):
+  # split_aug = []
+  # gblurstr, cutoutstr, shearstr = 'gblurstr', 'cutoutstr', 'shearstr'
+  # choices = [gblurstr, cutoutstr, shearstr]
+  # for feature, label in split:
+    # augmentation = np.random.choice(choices)
+    # if cutoutstr in augmentation:
+        # #do rotation and cutout
+        # print('doing cutout')
+        # for angle in np.arange(0, 360, 10):
+            # cutout = iaa.Cutout()
+            # feature2 = cutout(image = feature)
+            # feature3 = cutout(image = feature)
+            # rotate = iaa.geometric.Affine(rotate = angle)
+            # feature = rotate(image = feature)
+            # feature2 = rotate(image = feature2)
+            # feature3 = rotate(image = feature3)
+            # split_aug.append([feature, label])
+            # split_aug.append([feature2, label])
+            # split_aug.append([feature3, label])
+    # elif gblurstr in augmentation:
+        # #do rotation and gblur
+        # print('doing gblur')
+        # for angle in np.arange(0, 360, 10):
+            # gblur = iaa.GaussianBlur(sigma = 5)
+            # feature2 = gblur(image = feature)
+            # rotate = iaa.geometric.Affine(rotate = angle)
+            # feature = rotate(image = feature)
+            # feature2 = rotate(image = feature2)
+            # split_aug.append([feature, label])
+            # split_aug.append([feature2, label])
+    # else:
+        # #do rotation and shear
+        # print('doing shear')
+        # for angle in np.arange(0, 360, 10):
+            # shear = iaa.ShearX(20)
+            # rotate = iaa.geometric.Affine(rotate = angle)
+            # feature = rotate(image = feature)
+            # feature2 = shear(image = rotate(image = feature))
+            # split_aug.append([feature, label])
+            # split_aug.append([feature2, label])
+  # return split_aug
 
 def create_training_data(imformat, duplicate_channels):
   tdata = []
@@ -430,7 +430,7 @@ def train_model(train, val, name):
 
   return round(max(val_acc)*100, 1)
 
-def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False, randcomb=False, mobius=False):
+def read_args(baseline=False, cutout=False, shear=False, g_blur=False, crop=False, rand_comb=False, mobius=False):
   import argparse
 
   # Initialise parser
@@ -459,13 +459,13 @@ def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False
           shear = True
           break
       if vars(args)['gblur']:
-          gblur = True
+          g_blur = True
           break
       if vars(args)['crop']:
           crop = True
           break
       if vars(args)['randcomb']:
-          randcomb = True
+          rand_comb = True
           break
       if vars(args)['mobius']:
           mobius = True
@@ -473,7 +473,7 @@ def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False
       else:
         print('No augmentation set, please parse \"--help", or refer to README.txt')
         exit()
-  return baseline, cutout, shear, gblur, crop, randcomb, mobius
+  return baseline, cutout, shear, g_blur, crop, rand_comb, mobius
 
 def aug_mobius(split, M, mode, user_defined, rgb):
   split_aug = []
@@ -499,14 +499,14 @@ def aug_mobius(split, M, mode, user_defined, rgb):
 
   return split_aug
 
-def aug_rot(split):
-  split_aug = []
-  for feature, label in split:
-    for angle in np.arange(0, 360, 10):
-      rotate = iaa.geometric.Affine(rotate = angle)
-      feature = rotate(image = feature)
-      split_aug.append([feature, label])
-  return split_aug
+# def aug_rot(split):
+  # split_aug = []
+  # for feature, label in split:
+    # for angle in np.arange(0, 360, 10):
+      # rotate = iaa.geometric.Affine(rotate = angle)
+      # feature = rotate(image = feature)
+      # split_aug.append([feature, label])
+  # return split_aug
 
 
 def train_model_inceptionv3(train, val, name):
