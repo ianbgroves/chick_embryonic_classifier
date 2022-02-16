@@ -5,9 +5,9 @@
 1. Install [Anaconda](https://docs.anaconda.com/anaconda/install/index.html)
 2. Clone the repository
 3. From the command line, cd to the repository e.g. ```rb cd documents/github/chick_embryo_DCNN_classifier```
-4. run ```rb conda create --name chick_dcnn_classifier python=3.6```
-5. run ```rb conda activate chick_dcnn_classifier```
-6. run ```rb pip install --no-deps -r requirements.txt``` to install all packages needed.
+4. run ```conda create --name chick_dcnn_classifier python=3.6```
+5. run ```conda activate chick_dcnn_classifier```
+6. run ```pip install --no-deps -r requirements.txt``` to install all packages needed.
 
 ---
 With the repository as the working directory:
@@ -28,13 +28,13 @@ python pca_k_means.py
 Use the following tags for the different augmentation regimes described in the paper.
 
 
-*   ```rb --baseline``` for 'Baseline' 
-*  ```rb --cutout``` for 'Cutout'
-*   ```rb --shear``` for 'Shear
-*   ```rb --gblur``` for 'Gaussian Blur'
-*   ```rb --crop``` for 'Crop'
-*   ```rb --randcomb``` for 'Random combination'
-*   ```rb --mobius``` for 'Möbius transformations'
+*   ```--baseline``` for 'Baseline' 
+*  ```--cutout``` for 'Cutout'
+*   ```--shear``` for 'Shear
+*   ```--gblur``` for 'Gaussian Blur'
+*   ```--crop``` for 'Crop'
+*   ```--randcomb``` for 'Random combination'
+*   ```--mobius``` for 'Möbius transformations'
 
 
 For InceptionV3, run ``` python training_inceptionv3.py --baseline``` (e.g.)\
