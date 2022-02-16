@@ -14,7 +14,9 @@ With the repository as the working directory:
 # For clustering
 
 
-*  run '''rb python pca_k_means.py'''
+'''rb
+python pca_k_means.py
+'''
 
 
 
