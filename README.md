@@ -27,18 +27,18 @@ python pca_k_means.py
 Use the following tags for the different augmentation regimes described in the paper.
 
 
-*   --baseline for 'Baseline' 
-*   --cutout for 'Cutout'
-*   --shear for 'Shear
-*   --gblur for 'Gaussian Blur'
-*   --crop for 'Crop'
-*   --randcomb for 'Random combination'
-*   --mobius for 'Möbius transformations'
+*   ```rb --baseline``` for 'Baseline' 
+*  ```rb --cutout``` for 'Cutout'
+*   ```rb --shear``` for 'Shear
+*   ```rb --gblur``` for 'Gaussian Blur'
+*   ```rb --crop``` for 'Crop'
+*   ```rb --randcomb``` for 'Random combination'
+*   ```rb --mobius``` for 'Möbius transformations'
 
 
-For InceptionV3, run python training_inceptionv3.py --baseline (e.g.)\
-For ResNet50, run python training_resnet50.py --baseline (e.g.)\
-For our model, run python training_our_model.py --baseline (e.g.)
+For InceptionV3, run ```rb python training_inceptionv3.py --baseline``` (e.g.)\
+For ResNet50, run ```rb python training_resnet50.py --baseline``` (e.g.)\
+For our model, run ```rb python training_our_model.py --baseline``` (e.g.)
 
 
 
