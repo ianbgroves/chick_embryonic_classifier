@@ -6,8 +6,8 @@ import numpy as np
 from imgaug import augmenters as iaa
 
 from utils import k_fold_splitter, create_training_data, aug_rot, aug_crop, aug_cutout, aug_shear, aug_g_blur, \
-    aug_rand_comb, train_model_inceptionv3, read_args, aug_mobius, shift_func, mobius_fast_interpolation, getabcd_1fix, \
-    M_admissable, madmissable_abcd
+    aug_rand_comb, train_model_inceptionv3, read_args, aug_mobius, shift_func, mobius_fast_interpolation, \
+    getabcd_1fix, M_admissable, madmissable_abcd
 
 # Initialise booleans parsed from the command line
 
