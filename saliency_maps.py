@@ -4,21 +4,22 @@ from matplotlib import pyplot as plt
 import tensorflow as tf
 import tensorflow.keras as keras
 from PIL import Image
+import os
 from tensorflow.keras.preprocessing.image import load_img
 from tensorflow.keras.applications.vgg16 import preprocess_input
 from tf_keras_vis.utils.model_modifiers import ReplaceToLinear
 from tf_keras_vis.utils.scores import CategoricalScore
-from tensorflow.keras import backend as K
 from tf_keras_vis.saliency import Saliency
+from tensorflow.keras import backend as K
 
 path = os.getcwd()
 
-baseline_path = 'baseline3_8Nov-17-2021'
-crop_path = 'crop3_8Nov-17-2021'
-cutout_path = 'cutout3_8Nov-17-2021'
-shear_path = 'shear4_8Nov-17-2021'
-blur_path = 'gblur2_8Nov-17-2021'
-rand_comb_path = 'rand_cutout_gblur_shear2_8Nov-18-2021'
+baseline_path = 'Models/baseline3_8Nov-17-2021'
+crop_path = 'Models/crop3_8Nov-17-2021'
+cutout_path = 'Models/cutout3_8Nov-17-2021'
+shear_path = 'Models/shear4_8Nov-17-2021'
+blur_path = 'Models/gblur2_8Nov-17-2021'
+rand_comb_path = 'Models/rand_cutout_gblur_shear2_8Nov-18-2021'
 
 baseline_model = keras.models.load_model(baseline_path)
 crop_model = keras.models.load_model(crop_path)
@@ -28,7 +29,7 @@ blur_model = keras.models.load_model(blur_path)
 rand_comb_model = keras.models.load_model(rand_comb_path)
 
 # Image titles
-image_titles = ['10.1', '10.2', '10.3']
+image_titles = ['S3Fig_A', 'Fig4_A', 'S3Fig_B']  # 10.1, 10.2, 10.3 respectively
 
 # Load images and Convert them to a Numpy array
 
@@ -60,8 +61,6 @@ for i, title in enumerate(image_titles):
 replace2linear = ReplaceToLinear()
 
 
-# 1 is the imagenet index corresponding to Goldfish, 294 to Bear and 413 to Assault Rifle.
-
 score = CategoricalScore([0, 1, 2])
 def score_function(output):
     # The `output` variable refers to the output of the model,
@@ -71,27 +70,33 @@ def score_function(output):
    
 tf.shape(X)  # Should be: <tf.Tensor: shape=(4,), dtype=int32, numpy=array([  3, 200, 200,   1], dtype=int32)>
 
-model_list = [baseline_model, crop_model, cutout_model, shear_model, blur_model, rand_comb_model]
-name_list = ['baseline', 'crop', 'cutout', 'shear', 'blur', 'randcomb']
-
+model_list = [baseline_model,  blur_model, cutout_model, shear_model, rand_comb_model, crop_model]
+name_list = ['i', 'ii', 'iii','iv', 'v', 'vi']
 j = 0
 for model in model_list:
-  
-  # Create Saliency object.
-  saliency = Saliency(model,
-                      model_modifier=replace2linear,
-                      clone=True)
-  # Generate saliency map with smoothing that reduce noise by adding noise
-  saliency_map = saliency(score,
-                          X,
-                          smooth_samples=20, # The number of calculating gradients iterations.
-                          smooth_noise=0.05) # noise spread level.
+
+    # Create Saliency object.
+    saliency = Saliency(model,
+                        model_modifier=replace2linear,
+                        clone=True)
+    # Generate saliency map with smoothing that reduce noise by adding noise
+    saliency_map = saliency(score,
+                            X,
+                            smooth_samples=20,  # The number of calculating gradients iterations.
+                            smooth_noise=0.05)  # noise spread level.
 
 
-  # Render
-  for i, title in enumerate(image_titles):
-      plt.figure()
-      plt.imshow(saliency_map[i], cmap='jet')
-      plt.savefig('{}_saliency.svg'.format(image_titles[i]))     
- 
-j = j+1
+    # Render
+    f, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4), dpi=300)
+
+    for i, title in enumerate(image_titles):
+        ax[i].set_title(title, fontsize=14)
+        ax[i].imshow(saliency_map[i], cmap='jet')
+        ax[i].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+    f.savefig(
+        'Saliency_outputs/panel_{}.svg'.format(
+            name_list[j]), bbox_inches='tight')
+    j = j + 1
