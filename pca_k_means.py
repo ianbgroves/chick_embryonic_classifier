@@ -13,13 +13,14 @@ from pathlib import Path
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-# sklearn
+
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 
+# Import functions from utils.py
 from utils import create_training_data_k_means, reshape_and_normalize, scree_plot, fit_PCA, elbow_plot, fit_k_means, counter, plotter, plot_counts, plot_scatter
 
-
+# Setting the dataset path
 path = os.getcwd()
 DATADIR = path+'/labeled_data'
 DATADIR = Path(DATADIR)
