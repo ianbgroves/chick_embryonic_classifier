@@ -62,6 +62,8 @@ replace2linear = ReplaceToLinear()
 
 
 score = CategoricalScore([0, 1, 2])
+
+
 def score_function(output):
     # The `output` variable refers to the output of the model,
     # so, return the three values for the 1st, the 2nd and the 3rd of sub-stages respectively.
@@ -71,7 +73,9 @@ def score_function(output):
 tf.shape(X)  # Should be: <tf.Tensor: shape=(4,), dtype=int32, numpy=array([  3, 200, 200,   1], dtype=int32)>
 
 model_list = [baseline_model,  blur_model, cutout_model, shear_model, rand_comb_model, crop_model]
-name_list = ['i', 'ii', 'iii','iv', 'v', 'vi']
+name_list = ['i', 'ii', 'iii','iv', 'v', 'vi']  # Refers to the panels in Fig S3 and Fig 4
+
+# Iterate through the different models, generating a saliency map for each
 j = 0
 for model in model_list:
 
@@ -85,8 +89,7 @@ for model in model_list:
                             smooth_samples=20,  # The number of calculating gradients iterations.
                             smooth_noise=0.05)  # noise spread level.
 
-
-    # Render
+    # Render saliency maps
     f, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4), dpi=300)
 
     for i, title in enumerate(image_titles):
