@@ -126,12 +126,18 @@ def aug_cutout(split):
 def aug_crop(split):
   split_aug = []
   for feature, label in split:
+    for angle in np.arange(0, 360, 10):
+      flip = iaa.Fliplr(1.0)
+      feature3 = flip(image=feature)
+      rotate = iaa.geometric.Affine(rotate = angle)
+      feature2 = rotate(image = feature)
+      split_aug.append([feature2, label])
+      split_aug.append([feature3, label])          
     for percent in np.arange(0, 0.3, 0.01):
-        # feature = cv2.equalizeHist(feature)
-        crop = iaa.Crop(percent = percent)
-        feature = crop(image = feature)
-        split_aug.append([feature, label])
-        return split_aug
+      crop = iaa.Crop(percent = percent)
+      feature = crop(image = feature)
+      split_aug.append([feature, label])        
+  return split_aug
 
 def aug_rand_comb(split):
   split_aug = []
@@ -212,6 +218,28 @@ def create_training_data(imformat, duplicate_channels):
           img_array = img_array.resize((200,200), Image.ANTIALIAS)
           img_array = np.array(img_array)
           tdata.append([img_array, 2])
+      except Exception as e:  
+          pass
+  return tdata
+
+def create_training_data_limb():
+  tdata = []
+  for img in os.listdir('labeled_data_all_stages/control'):  # iterate over each image
+      try:
+          img_array = Image.open('labeled_data_all_stages/control/{}'.format(img)).convert('L')
+          img_array = ImageOps.equalize(img_array, mask= None)
+          img_array = img_array.resize((200,200), Image.ANTIALIAS)
+          img_array = np.array(img_array)
+          tdata.append([img_array, 0])
+      except Exception as e:  
+          pass
+  for img in os.listdir('labeled_data_all_stages/treated'):  # iterate over each image
+      try:
+          img_array = Image.open('labeled_data_all_stages/treated/{}'.format(img)).convert('L') 
+          img_array = ImageOps.equalize(img_array, mask= None)
+          img_array = img_array.resize((200,200), Image.ANTIALIAS)
+          img_array = np.array(img_array)
+          tdata.append([img_array, 1])
       except Exception as e:  
           pass
   return tdata
@@ -317,6 +345,108 @@ def train_model(train, val, name):
 
   return round(max(val_acc)*100, 1)
 
+
+def train_model_limb(train, val, name):
+  from datetime import date as dt
+  seed(12345)
+  shuffle(train)
+  shuffle(val)
+
+  # Preprocessing the data into X_train etc with relevant input shapes
+  X_train = []
+  y_train = []
+  X_val = []
+  y_val = []
+  img_size = 200
+
+  for i in train:
+    for feature, label in i:
+      X_train.append(feature)
+      y_train.append(label)
+  for feature, label in val:
+    X_val.append(feature)
+    y_val.append(label)
+
+  X_train = np.array(X_train) / 255
+  X_val = np.array(X_val) / 255
+
+  X_train = X_train.reshape(X_train.shape[0], 200, 200, 1)
+  X_val = X_val.reshape(X_val.shape[0], 200, 200, 1)
+
+  X_train.astype('float32')
+  X_val.astype('float32')
+  print('X_train shape:', np.shape(X_train))
+  print('X_val shape:', np.shape(X_val))
+
+
+  y_train=to_categorical(y_train)
+  y_val=to_categorical(y_val)
+  print('y_train shape:', np.shape(y_train))
+  print('y_val shape:', np.shape(y_val))
+
+  layer_drop = 0.2
+  final_drop = 0.5
+  activation = 'relu'
+  lamda = 0.0001
+
+  model = Sequential([
+    layers.Conv2D(16, 3, padding='same', activation= activation, input_shape = (200, 200, 1), kernel_regularizer=regularizers.l2(lamda)),
+    layers.Dropout(layer_drop),
+    layers.MaxPooling2D((2,2), padding='same'),
+    layers.Conv2D(32, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
+    layers.Dropout(layer_drop),
+    layers.MaxPooling2D((2,2), padding='same'),
+    layers.Conv2D(64, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
+    layers.Dropout(layer_drop),
+    layers.MaxPooling2D((2,2), padding='same'),
+    layers.Conv2D(128, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
+    layers.Dropout(layer_drop),
+    layers.MaxPooling2D((2,2), padding='same'),
+    layers.Conv2D(256, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
+    layers.Dropout(layer_drop),
+    layers.MaxPooling2D((2,2), padding='same'),
+    layers.Conv2D(512, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
+    layers.Dropout(layer_drop),
+    layers.MaxPooling2D((2,2), padding='same'),
+    layers.Conv2D(1024, 3, padding='same', activation=activation, kernel_regularizer=regularizers.l2(lamda)),
+    layers.Dropout(layer_drop),
+    layers.MaxPooling2D((2,2), padding='same'),
+    layers.Flatten(),
+    layers.Dense(1024, activation=activation),
+    layers.Dropout(final_drop),
+    layers.Dense(2, activation = 'sigmoid')
+  ])
+
+  model.compile(optimizer = Adam(learning_rate = 0.0001),
+                loss = 'binary_crossentropy',
+                metrics = ['accuracy'])
+
+  earlyStop = EarlyStopping(monitor = 'val_loss', min_delta = 0.01, patience = 10, mode='min', restore_best_weights=True)
+  epochs = 50
+  history = model.fit(x=X_train,
+                      y=y_train,
+                      epochs=epochs,
+                      batch_size=32,
+                      validation_data=(X_val, y_val),
+                      callbacks=[earlyStop])
+
+
+
+  acc = history.history['accuracy']
+  val_acc = history.history['val_accuracy']
+  loss = history.history['loss']
+  val_loss = history.history['val_loss']
+  accuracy = history.history['val_accuracy'][-1]
+
+  today = dt.today()
+  date = today.strftime("%b-%d-%Y")
+  model.save(name + '{}'.format(date))
+
+  del model
+  K.clear_session()
+
+  return round(max(val_acc)*100, 1)
+
 def read_args(baseline=False, cutout=False, shear=False, g_blur=False, crop=False, rand_comb=False, mobius=False):
   import argparse
 
@@ -385,16 +515,6 @@ def aug_mobius(split, M, mode, user_defined, rgb):
     #   # feature = np.array(rotate) 
 
   return split_aug
-
-# def aug_rot(split):
-  # split_aug = []
-  # for feature, label in split:
-    # for angle in np.arange(0, 360, 10):
-      # rotate = iaa.geometric.Affine(rotate = angle)
-      # feature = rotate(image = feature)
-      # split_aug.append([feature, label])
-  # return split_aug
-
 
 def train_model_inceptionv3(train, val, name):
   from datetime import date as dt
