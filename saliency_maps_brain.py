@@ -14,12 +14,12 @@ from tensorflow.keras import backend as K
 
 path = os.getcwd()
 
-baseline_path = 'Models/baseline3_8Nov-17-2021'
-crop_path = 'Models/crop3_8Nov-17-2021'
-cutout_path = 'Models/cutout3_8Nov-17-2021'
-shear_path = 'Models/shear4_8Nov-17-2021'
-blur_path = 'Models/gblur2_8Nov-17-2021'
-rand_comb_path = 'Models/rand_cutout_gblur_shear2_8Nov-18-2021'
+baseline_path = 'Models/brain/baseline3_8Nov-17-2021'
+crop_path = 'Models/brain/crop3_8Nov-17-2021'
+cutout_path = 'Models/brain/cutout3_8Nov-17-2021'
+shear_path = 'Models/brain/shear4_8Nov-17-2021'
+blur_path = 'Models/brain/gblur2_8Nov-17-2021'
+rand_comb_path = 'Models/brain/rand_cutout_gblur_shear2_8Nov-18-2021'
 
 baseline_model = keras.models.load_model(baseline_path)
 crop_model = keras.models.load_model(crop_path)
@@ -29,19 +29,19 @@ blur_model = keras.models.load_model(blur_path)
 rand_comb_model = keras.models.load_model(rand_comb_path)
 
 # Image titles
-image_titles = ['S3Fig_A', 'Fig4_A', 'S3Fig_B']  # 10.1, 10.2, 10.3 respectively
+image_titles = ['S4Fig_A', 'Fig3_A', 'S4Fig_B']  # 10.1, 10.2, 10.3 respectively
 
 # Load images and Convert them to a Numpy array
 
-img1 = Image.open('10_1_b.png').convert('L')
+img1 = Image.open('saliency_tests/brain/10_1.png').convert('L')
 img1 = img1.resize((200,200), Image.ANTIALIAS)
 img1 = np.array(img1)
 
-img2 = Image.open('10_2_a.png').convert('L')
+img2 = Image.open('saliency_tests/brain/10_2.png').convert('L')
 img2 = img2.resize((200,200), Image.ANTIALIAS)
 img2 = np.array(img2)
 
-img3 = Image.open('10_3_b.png').convert('L')
+img3 = Image.open('saliency_tests/brain/10_3.png').convert('L')
 img3 = img3.resize((200,200), Image.ANTIALIAS)
 img3 = np.array(img3)
 
