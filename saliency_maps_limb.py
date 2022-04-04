@@ -32,19 +32,15 @@ image_titles = ['Fig4_A', 'Fig4_B']  # control and treated respectively
 
 # Load images and Convert them to a Numpy array
 
-img1 = Image.open('saliency_tests/brain/10_1.png').convert('L')
+img1 = Image.open('saliency_tests/limb/.png').convert('L')
 img1 = img1.resize((200,200), Image.ANTIALIAS)
 img1 = np.array(img1)
 
-img2 = Image.open('saliency_tests/brain/10_2.png').convert('L')
+img2 = Image.open('saliency_tests/limb/10_2.png').convert('L')
 img2 = img2.resize((200,200), Image.ANTIALIAS)
 img2 = np.array(img2)
 
-img3 = Image.open('saliency_tests/brain/10_3.png').convert('L')
-img3 = img3.resize((200,200), Image.ANTIALIAS)
-img3 = np.array(img3)
-
-images = np.asarray([np.array(img1), np.array(img2), np.array(img3)])
+images = np.asarray([np.array(img1), np.array(img2))
 
 # Preparing input data for VGG16 style network
 X = preprocess_input(images)
@@ -60,11 +56,11 @@ for i, title in enumerate(image_titles):
 replace2linear = ReplaceToLinear()
 
 
-score = CategoricalScore([0, 1, 2])
+score = CategoricalScore([0, 1])
 def score_function(output):
     # The `output` variable refers to the output of the model,
-    # so, return the three values for the 1st, the 2nd and the 3rd of sub-stages respectively.
-   return (output[None, 0], output[None, 1], output[None, 2])
+    # so, return the two values for the control and treated respectively.
+   return (output[None, 0], output[None, 1])
 
    
 tf.shape(X)  # Should be: <tf.Tensor: shape=(4,), dtype=int32, numpy=array([  3, 200, 200,   1], dtype=int32)>
@@ -86,7 +82,7 @@ for model in model_list:
 
 
     # Render
-    f, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4), dpi=300)
+    f, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4), dpi=300)
 
     for i, title in enumerate(image_titles):
         ax[i].set_title(title, fontsize=14)
