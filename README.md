@@ -12,7 +12,7 @@
 ---
 With the repository as the working directory:
 
-# For clustering
+# Clustering (Figs 1-2)
 
 
 ```rb
@@ -21,9 +21,7 @@ python pca_k_means.py
 
 
 
-
-
-# For neural network training
+# Neural network training (Tables 1-2, S2-5 tables)
 
 Use the following tags for the different augmentation regimes described in the paper.
 
@@ -44,7 +42,7 @@ For our model, run ``` python training_our_model.py --baseline``` (e.g.)
 
 
 
-# For saliency analysis
+# Saliency analysis (Figs 3-4, S4-5 Figs)
 
 Figure 3 and S4 Fig
 
@@ -58,3 +56,9 @@ Figure 4 and S5 Fig
 python saliency_maps_limb.py
 ```
 
+
+# Traditional classifiers (Support vector machine, K nearest neighbours, Random Forest classifier, S1 Table)
+
+```rb
+training_svm_rfc_knn.py
+```
