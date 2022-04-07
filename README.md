@@ -1,4 +1,4 @@
-# Code for the paper 'Bespoke data augmentation and network construction allow for image classification on small microscopy datasets'
+# Code for the paper 'Bespoke data augmentation and network construction enable developmental morphological classification on limited microscopy datasets'.
 
 # Installation:
 
