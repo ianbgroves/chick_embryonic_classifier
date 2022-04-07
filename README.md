@@ -44,5 +44,17 @@ For our model, run ``` python training_our_model.py --baseline``` (e.g.)
 
 
 
+# For saliency analysis
 
+Figure 3 and S4 Fig
+
+```rb
+python saliency_maps_brain.py
+```
+
+Figure 4 and S5 Fig
+
+```rb
+python saliency_maps_limb.py
+```
 
