@@ -67,13 +67,13 @@ s5_fig_processed = np.reshape(s5_fig_processed, (-1, 200,200, 1))
 for i, title in enumerate(fig4_image_titles):
     plt.figure()
     plt.imshow(fig4_images[i], cmap='gray')
-    plt.savefig('{}.svg'.format(fig4_image_titles[i]))
+    plt.savefig('Saliency_outputs/limb/{}.svg'.format(fig4_image_titles[i]))
 
 
 for i, title in enumerate(s5_fig_image_titles):
     plt.figure()
     plt.imshow(s5_fig_images[i], cmap='gray')
-    plt.savefig('{}.svg'.format(s5_fig_image_titles[i]))
+    plt.savefig('Saliency_outputs/limb/{}.svg'.format(s5_fig_image_titles[i]))
 
 
 replace2linear = ReplaceToLinear()
@@ -90,7 +90,6 @@ tf.shape(fig4_processed)  # Should be: <tf.Tensor: shape=(4,), dtype=int32, nump
 
 model_list = [baseline_model,  blur_model, cutout_model, shear_model, rand_comb_model, crop_model]
 name_list = ['i', 'ii', 'iii','iv', 'v', 'vi']
-j = 0
 
 for j, model in zip(name_list, model_list):
 
@@ -146,8 +145,7 @@ for i, title in enumerate(s5_fig_image_titles):
 plt.tight_layout()
 
 f.savefig(
-    'Saliency_outputs/limb/S5_Fig_panel_{}.svg'.format(
-        j), bbox_inches='tight')
+    'Saliency_outputs/limb/S5_Fig_B.svg', bbox_inches='tight')
 
     
 # plt.show()

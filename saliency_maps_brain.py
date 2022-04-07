@@ -55,8 +55,8 @@ X = np.reshape(X,(-1, 200,200, 1))
 
 for i, title in enumerate(image_titles):
     plt.figure()
-    plt.imshow(images[i])
-    plt.savefig('{}.svg'.format(image_titles[i]))
+    plt.imshow(images[i], cmap='gray')
+    plt.savefig('Saliency_outputs/brain/{}.svg'.format(image_titles[i]))
 
 replace2linear = ReplaceToLinear()
 
@@ -76,8 +76,8 @@ model_list = [baseline_model,  blur_model, cutout_model, shear_model, rand_comb_
 name_list = ['i', 'ii', 'iii','iv', 'v', 'vi']  # Refers to the panels in Fig S3 and Fig 4
 
 # Iterate through the different models, generating a saliency map for each
-j = 0
-for model in model_list:
+
+for j, model in zip(name_list, model_list):
 
     # Create Saliency object.
     saliency = Saliency(model,
@@ -89,7 +89,8 @@ for model in model_list:
                             smooth_samples=20,  # The number of calculating gradients iterations.
                             smooth_noise=0.05)  # noise spread level.
 
-    # Render saliency maps
+
+    # Render
     f, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4), dpi=300)
 
     for i, title in enumerate(image_titles):
@@ -98,8 +99,9 @@ for model in model_list:
         ax[i].axis('off')
 
     plt.tight_layout()
-    plt.show()
+
     f.savefig(
-        'Saliency_outputs/panel_{}.svg'.format(
-            name_list[j]), bbox_inches='tight')
-    j = j + 1
+        'Saliency_outputs/brain/panel_{}.svg'.format(
+        j), bbox_inches='tight')
+
+    
