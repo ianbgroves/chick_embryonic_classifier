@@ -43,6 +43,7 @@ from PIL import Image, ImageOps
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
+from sklearn.model_selection import train_test_split
 import matplotlib.ticker as plticker
 import matplotlib as mpl
 from sklearn.cluster import KMeans
@@ -909,25 +910,25 @@ def create_training_data_k_means():
 
   tdata = []
   tlabel = []
-  for img in os.listdir('labeled_data/10_1'):  # iterate over each image
+  for img in os.listdir('labeled_data_brain/10_1'):  # iterate over each image
       try:
-          img_array = cv2.imread('labeled_data/10_1/{}'.format(img), cv2.IMREAD_GRAYSCALE) 
+          img_array = cv2.imread('labeled_data_brain/10_1/{}'.format(img), cv2.IMREAD_GRAYSCALE) 
           tdata.append(cv2.resize(img_array, (200, 200)))
           tlabel.append(0)
       except Exception as e:  
           pass
 
-  for img in os.listdir('labeled_data/10_2'):  # iterate over each image
+  for img in os.listdir('labeled_data_brain/10_2'):  # iterate over each image
       try:
-          img_array = cv2.imread('labeled_data/10_2/{}'.format(img), cv2.IMREAD_GRAYSCALE) 
+          img_array = cv2.imread('labeled_data_brain/10_2/{}'.format(img), cv2.IMREAD_GRAYSCALE) 
           tdata.append(cv2.resize(img_array, (200, 200)))
           tlabel.append(1)
       except Exception as e:  
           pass
 
-  for img in os.listdir('labeled_data/10_3'):  # iterate over each image
+  for img in os.listdir('labeled_data_brain/10_3'):  # iterate over each image
       try:
-          img_array = cv2.imread('labeled_data/10_3/{}'.format(img), cv2.IMREAD_GRAYSCALE) 
+          img_array = cv2.imread('labeled_data_brain/10_3/{}'.format(img), cv2.IMREAD_GRAYSCALE) 
           tdata.append(cv2.resize(img_array, (200, 200)))
           tlabel.append(2)
       except Exception as e:  
@@ -966,7 +967,29 @@ def reshape_and_normalize(X, Y, nb_classes):
 
   Y_train = to_categorical(Y_train, nb_classes)
   return X_train, Y_train
+  
+def reshape_and_normalize_TC(X, Y, nb_classes):
+  shuffle(X)
+  shuffle(Y)
+  X_train, x_test, Y_train, y_test = train_test_split(X, Y, test_size=0.2) # 70% training and 30% test 
+  X_train = np.array(X_train).reshape(-1, 200, 200, 1) # Array containing every pixel as an index (1D array - 40,000 long)
+  x_test = np.array(x_test).reshape(-1,200,200,1)
+  X_train = np.array(X_train)
+  Y_train = np.array(Y_train)
+  x_test = np.array(x_test)
+  y_test = np.array(y_test)
+ 
+  X_train = X_train.astype('float32') 
 
+  # Normalization
+
+  X_train = X_train/255.0
+  x_test = x_test/255.0
+
+
+  # convert class vectors to binary class matrices with one-hot encoding
+
+  return X_train, Y_train, x_test, y_test
 def scree_plot(pca):
 
 
