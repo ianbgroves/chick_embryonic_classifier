@@ -101,7 +101,7 @@ if mobius:
 
   # mobius method uses RGB images, and then converts to grayscale as the final step
 
-  tdata = create_training_data(imformat="L", duplicate_channels=False)
+  tdata = create_training_data(imformat="L", duplicate_channels=True)
   seed(123)
   shuffle(tdata)
   k=10

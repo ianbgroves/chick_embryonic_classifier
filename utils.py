@@ -92,7 +92,7 @@ def aug_shear(split):
       split_aug.append([feature2, label])
       return split_aug
 
-def aug_g_blur(split):
+def aug_gblur(split):
   split_aug = []
   for feature, label in split:
     for angle in np.arange(0, 360, 10):
@@ -139,7 +139,7 @@ def aug_crop(split):
       split_aug.append([feature, label])        
   return split_aug
 
-def aug_rand_comb(split):
+def aug_randcomb(split):
   split_aug = []
   gblurstr, cutoutstr, shearstr = 'gblurstr', 'cutoutstr', 'shearstr'
   choices = [gblurstr, cutoutstr, shearstr]
@@ -187,9 +187,9 @@ def aug_rand_comb(split):
 
 def create_training_data(imformat, duplicate_channels):
   tdata = []
-  for img in os.listdir('labeled_data/10_1'):  # iterate over each image
+  for img in os.listdir('labeled_data_brain/10_1'):  # iterate over each image
       try:
-          img_array = Image.open('labeled_data/10_1/{}'.format(img)).convert(imformat)
+          img_array = Image.open('labeled_data_brain/10_1/{}'.format(img)).convert(imformat)
           img_array = ImageOps.equalize(img_array, mask= None)
           if duplicate_channels:
             img_array = img_array.convert('RGB')                 
@@ -198,9 +198,9 @@ def create_training_data(imformat, duplicate_channels):
           tdata.append([img_array, 0])
       except Exception as e:  
           pass
-  for img in os.listdir('labeled_data/10_2'):  # iterate over each image
+  for img in os.listdir('labeled_data_brain/10_2'):  # iterate over each image
       try:
-          img_array = Image.open('labeled_data/10_2/{}'.format(img)).convert(imformat) 
+          img_array = Image.open('labeled_data_brain/10_2/{}'.format(img)).convert(imformat) 
           img_array = ImageOps.equalize(img_array, mask= None)
           if duplicate_channels:
             img_array = img_array.convert('RGB')                 
@@ -209,9 +209,9 @@ def create_training_data(imformat, duplicate_channels):
           tdata.append([img_array, 1])
       except Exception as e:  
           pass
-  for img in os.listdir('labeled_data/10_3'):  # iterate over each image
+  for img in os.listdir('labeled_data_brain/10_3'):  # iterate over each image
       try:
-          img_array = Image.open('labeled_data/10_3/{}'.format(img)).convert(imformat) 
+          img_array = Image.open('labeled_data_brain/10_3/{}'.format(img)).convert(imformat) 
           img_array = ImageOps.equalize(img_array, mask= None)
           if duplicate_channels:
             img_array = img_array.convert('RGB')             
@@ -222,21 +222,25 @@ def create_training_data(imformat, duplicate_channels):
           pass
   return tdata
 
-def create_training_data_limb():
+def create_training_data_limb(imformat, duplicate_channels):
   tdata = []
-  for img in os.listdir('labeled_data_all_stages/control'):  # iterate over each image
+  for img in os.listdir('labeled_data_limb/control'):  # iterate over each image
       try:
-          img_array = Image.open('labeled_data_all_stages/control/{}'.format(img)).convert('L')
+          img_array = Image.open('labeled_data_limb/control/{}'.format(img)).convert(imformat)
           img_array = ImageOps.equalize(img_array, mask= None)
+          if duplicate_channels:
+            img_array = img_array.convert('RGB')                 
           img_array = img_array.resize((200,200), Image.ANTIALIAS)
           img_array = np.array(img_array)
           tdata.append([img_array, 0])
       except Exception as e:  
           pass
-  for img in os.listdir('labeled_data_all_stages/treated'):  # iterate over each image
+  for img in os.listdir('labeled_data_limb/treated'):  # iterate over each image
       try:
-          img_array = Image.open('labeled_data_all_stages/treated/{}'.format(img)).convert('L') 
+          img_array = Image.open('labeled_data_limb/treated/{}'.format(img)).convert(imformat) 
           img_array = ImageOps.equalize(img_array, mask= None)
+          if duplicate_channels:
+            img_array = img_array.convert('RGB')                 
           img_array = img_array.resize((200,200), Image.ANTIALIAS)
           img_array = np.array(img_array)
           tdata.append([img_array, 1])
@@ -447,7 +451,7 @@ def train_model_limb(train, val, name):
 
   return round(max(val_acc)*100, 1)
 
-def read_args(baseline=False, cutout=False, shear=False, g_blur=False, crop=False, rand_comb=False, mobius=False):
+def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False, randcomb=False, mobius=False):
   import argparse
 
   # Initialise parser
@@ -490,7 +494,7 @@ def read_args(baseline=False, cutout=False, shear=False, g_blur=False, crop=Fals
       else:
         print('No augmentation set, please parse \"--help", or refer to README.txt')
         exit()
-  return baseline, cutout, shear, g_blur, crop, rand_comb, mobius
+  return baseline, cutout, shear, gblur, crop, randcomb, mobius
 
 def aug_mobius(split, M, mode, user_defined, rgb):
   split_aug = []
