@@ -32,15 +32,15 @@ image_titles = ['Fig4_A', 'Fig4_B']  # control and treated respectively
 
 # Load images and Convert them to a Numpy array
 
-img1 = Image.open('saliency_tests/limb/.png').convert('L')
+img1 = Image.open('saliency_tests/limb/c_ctrl.jpg').convert('L')
 img1 = img1.resize((200,200), Image.ANTIALIAS)
 img1 = np.array(img1)
 
-img2 = Image.open('saliency_tests/limb/10_2.png').convert('L')
+img2 = Image.open('saliency_tests/limb/c_treated.jpg').convert('L')
 img2 = img2.resize((200,200), Image.ANTIALIAS)
 img2 = np.array(img2)
 
-images = np.asarray([np.array(img1), np.array(img2))
+images = np.asarray([np.array(img1), np.array(img2)])
 
 # Preparing input data for VGG16 style network
 X = preprocess_input(images)
