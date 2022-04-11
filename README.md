@@ -12,9 +12,9 @@
 ---
 With the repository as the working directory:
 
-# Clustering (Figs 1-2)
+# Clustering
 
-
+Figs 1-2
 ```rb
 python pca_k_means.py
 ```
