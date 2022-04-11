@@ -12,7 +12,7 @@
 ---
 With the repository as the working directory:
 
-# Clustering
+# Clustering (Figs 1-2)
 
 Figs 1-2
 ```rb
