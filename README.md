@@ -1,5 +1,8 @@
 # Code for the paper 'Bespoke data augmentation and network construction enable developmental morphological classification on limited microscopy datasets'.
 
+[Here](https://colab.research.google.com/drive/1wH53iao1chYqNcCUbx7cXNvgCMm0gRFT?usp=sharing) is the Colab notebook where you can train DCNNs on your own data 
+
+
 # Installation:
 
 1. Install [Anaconda](https://docs.anaconda.com/anaconda/install/index.html)
