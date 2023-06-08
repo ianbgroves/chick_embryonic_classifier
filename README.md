@@ -8,7 +8,7 @@
 1. Install [Anaconda](https://docs.anaconda.com/anaconda/install/index.html)
 2. Clone the repository
 3. From the command line, cd to the repository e.g. ```cd documents/github/chick_embryo_DCNN_classifier```
-4. run ```conda create --name chick_dcnn_classifier python=3.6```
+4. run ```conda create --name chick_dcnn_classifier python=3.10```
 5. run ```conda activate chick_dcnn_classifier```
 6. run ```pip install --no-deps -r requirements.txt``` to install all packages needed.
 
