@@ -50,6 +50,8 @@ Then, run
 python transfer_learning_wing.py
 ```
 
+# Saliency analysis (Figs 3-4)
+
 For brain saliency analyses (Fig 3), compile final model part 1 and 2 as above.
 Then, run 
 ```rb
@@ -61,7 +63,7 @@ Then, run
 ```
 python saliency_limb.py
 ```
-
+# Supplementary Figs and tables
 For the unsupervised clustering (Fig S1)
 
 ```rb
