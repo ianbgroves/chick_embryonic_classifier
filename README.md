@@ -32,8 +32,7 @@ Use the following tags for the different augmentation regimes described in the p
 
 For our model, run ``` python training_brain.py -exp training_test --baseline``` (e.g.)
 
-Or, for InceptionV3/ResNet50 re-training, set either the resnet/inception booleans to true in ``` training_brain.py ```\
-and then run ``` python training_brain.py --baseline``` (e.g.)
+Or, for InceptionV3/ResNet50 re-training, set either the resnet/inception booleans to true by running ``` python training_brain.py -exp resnet_test --baseline --resnet``` (e.g.)
 
 
 For the unsupervised clustering (Fig S1)
