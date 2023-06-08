@@ -15,16 +15,8 @@
 ---
 With the repository as the working directory:
 
-# Clustering (Figs 1-2)
 
-Figs 1-2
-```rb
-python pca_k_means.py
-```
-
-
-
-# Neural network training (Tables 1-2, S2-5 tables)
+# Neural network training (Tables 1, S2-3 tables)
 
 Use the following tags for the different augmentation regimes described in the paper.
 
@@ -34,34 +26,33 @@ Use the following tags for the different augmentation regimes described in the p
 *   ```--shear``` for 'Shear
 *   ```--gblur``` for 'Gaussian Blur'
 *   ```--crop``` for 'Crop'
-*   ```--randcomb``` for 'Random combination'
+*   ```--randcomb``` for '1+2/4/5 RC in Table 1'
+*   ```--allcomb``` for '1+2+4+5 RC in Table 1'
 *   ```--mobius``` for 'Möbius transformations'
 
 
-For InceptionV3, run ``` python training_inceptionv3.py --baseline``` (e.g.)\
-For ResNet50, run ``` python training_resnet50.py --baseline``` (e.g.)\
 For our model, run ``` python training_our_model.py --baseline``` (e.g.)
 
+Or, for InceptionV3/ResNet50 re-training, set either the resnet/inception booleans to true in ``` training_brain.py ```\
+and then run ``` python training_brain.py --baseline``` (e.g.)\
 
 
-
-# Saliency analysis (Figs 3-4, S4-5 Figs)
-
-Figure 3 and S4 Fig
-
+For the unsupervised clustering in 
+Fig S1
+run
 ```rb
-python saliency_maps_brain.py
+python pca_k_means.py
+```
+For the unsupervised clustering on Haralick features run
+Fig S2
+```rb
+python feature_extraction.py
 ```
 
-Figure 4 and S5 Fig
-
-```rb
-python saliency_maps_limb.py
-```
 
 
 # Traditional classifiers (Support vector machine, K nearest neighbours, Random Forest classifier, S1 Table)
-
+run 
 ```rb
 training_svm_rfc_knn.py
 ```
