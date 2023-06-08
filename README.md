@@ -36,7 +36,11 @@ For our model, run  (e.g.)
 python training_brain.py -exp training_test --baseline
 ```
 
-Or, for InceptionV3/ResNet50 re-training, set either the resnet/inception booleans to true by running (e.g.) ```rb python training_brain.py -exp resnet_test --baseline --resnet``` 
+Or, for InceptionV3/ResNet50 re-training, set either the resnet/inception booleans to true by running (e.g.) 
+
+```rb
+python training_brain.py -exp resnet_test --baseline --resnet
+``` 
 
 
 For the unsupervised clustering (Fig S1)
