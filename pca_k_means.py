@@ -1,4 +1,3 @@
-
 import seaborn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,33 +6,65 @@ import cv2
 import time
 import random
 import tensorflow
-import sklearn
 import pandas as pd
+import sklearn
+
 from pathlib import Path
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-
-
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 
 # Import functions from utils.py
-from utils import create_training_data_k_means, reshape_and_normalize, scree_plot, fit_PCA, elbow_plot, fit_k_means, counter, plotter, plot_counts, plot_scatter
-
+from binary_utils import *
+load = False
 # Setting the dataset path
-path = os.getcwd()
-DATADIR = path+'/labeled_data'
-DATADIR = Path(DATADIR)
+os.chdir('G:/My Drive/Python_projects/classifier/binary_classification/binary_pca_kmeans')
+if load:
+  split_dict = load_test_set("G:/My Drive/Python_projects/classifier/binary_classification/saved_test_sets/binary_baseline_3_Mar-14-2023/pkl_splits")
+  print(split_dict.keys())
+  X = split_dict['X']
+  Y = split_dict['Y']
+  X_test = split_dict['X_test']
+  y_test = split_dict['y_test']
+  print(len(X))
+  print(len(Y))
+  print(len(X_test))
+  print(len(y_test))
+  print(
+    "ratios of labels in the data set are {} {} {}".format(round(Y.count(0) / len(Y), 2),
+                                                           round(Y.count(1) / len(Y), 2),
+                                                           round(Y.count(2) / len(Y), 2)))
+  print("ratios of labels in the test set are {} : {} : {}".format(round(y_test.count(0) / len(y_test), 2),
+                                                                   round(y_test.count(1) / len(y_test), 2),
+                                                                   round(y_test.count(2) / len(y_test), 2)))
+  plt.imshow(X[0])
+else:
+
+    data = create_data('data_10a_b', duplicate_channels=False, equalize=True)
+
+    data_list = []
+    data_list.append(data[0:len(data)])
+
+    X = []
+    Y = []
+    for i in data_list:
+      for feature, label in i:
+        X.append(feature)
+        Y.append(label)
+#
+# DATADIR = path+'/labeled_data'
+# DATADIR = Path(DATADIR)
 
 #Sub directories for different categories
-CATEGORIES = ["10_1","10_2","10_3"]
+CATEGORIES = ["10a","10b"]
 
-print('Path:', path)
-print('Data directory:', DATADIR)
+# print('Path:', path)
+# print('Data directory:', DATADIR)
 
-X, Y = create_training_data_k_means()
+X, Y = aug_data_2(X, Y)
 
-X_train, Y_train = reshape_and_normalize(X, Y, nb_classes=3)
+X_train, Y_train = reshape_and_normalize(X, Y, nb_classes=2)
 
 pca, pca_fit, scores_pca = fit_PCA(X_train, n_components=10)
 scree_plot(pca)
@@ -43,7 +74,7 @@ PCA_components = pd.DataFrame(scores_pca)
 
 elbow_plot(PCA_components)
 
-kmeans, k_means_labels, Y_clust, unique_labels = fit_k_means(PCA_components, Y_train, number_of_clusters=3)
+kmeans, k_means_labels, Y_clust, unique_labels = fit_k_means(PCA_components, Y_train, number_of_clusters=2)
 
 label_count= [[] for i in range(unique_labels)]
 for n in range(unique_labels):
