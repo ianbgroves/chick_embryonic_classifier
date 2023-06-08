@@ -60,7 +60,7 @@ python saliency_brain.py
 
 For wing saliency analysis (Fig 4), compile 'limb_final_model.part1/2' as above.
 Then, run
-```
+```rb
 python saliency_limb.py
 ```
 # Supplementary Figs and tables
