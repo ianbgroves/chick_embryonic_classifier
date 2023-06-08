@@ -42,7 +42,8 @@ from argparse import ArgumentParser
 import seaborn as sns
 sns.set_theme(style="white")
 
-def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False, randcomb=False, mobius=False, allcomb_sparse=False, allcomb_full=False):
+def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False, randcomb=False, mobius=False, allcomb_sparse=False,
+              allcomb_full=False, resnet=False, inception=False):
     parser = ArgumentParser(
         description='provide an experiment name and one augmentation, type --help for details/list of augmentations')
 
@@ -66,6 +67,10 @@ def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False
                         help='if set, augments the data sparsely with baseline, cutout, shear, gblur transforms')
     parser.add_argument('--allcomb_full', dest='allcomb_full', default=False, action='store_true',
                         help='if set, augments each datum with baseline, cutout, shear, gblur transforms')
+    parser.add_argument('--resnet', dest='resnet', default=False, action='store_true',
+                        help='if set, re-trains resnet50')
+    parser.add_argument('--inception', dest='inception', default=False, action='store_true',
+                        help='if set, re-trains inception')
     exp_name = parser.parse_args().expname
     assert type(exp_name) == str, 'exp_name is not a string'
     args = parser.parse_args()
@@ -101,10 +106,19 @@ def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False
         else:
             print('No augmentation set, please parse \"--help", or refer to README.txt')
             exit()
-    print(randcomb)
-    return exp_name, baseline, cutout, shear, gblur, crop, randcomb, mobius, allcomb_sparse, allcomb_full
 
-def scree_plot(pca):
+    while (True):
+        if vars(args)['resnet']:
+            resnet = True
+            break
+        elif vars(args)['inception']:
+            inception = True
+            break
+        else:
+            break
+    return exp_name, baseline, cutout, shear, gblur, crop, randcomb, mobius, allcomb_sparse, allcomb_full, resnet, inception
+
+def scree_plot(pca, haralick=False):
     import matplotlib.ticker as plticker
 
     xloc = plticker.MultipleLocator(base=1.0)  # this locator puts ticks at regular intervals
@@ -125,14 +139,17 @@ def scree_plot(pca):
 
     plt.xlabel('PC', fontsize=20, fontweight='bold')
     plt.ylabel('Variance', fontsize=20, fontweight='bold')
-    plt.savefig(os.getcwd() + '/scree.png')
-    plt.show()
+    if haralick:
+        plt.savefig(os.getcwd() + '/S2_panel_A_scree.png')
+    else:
+        plt.savefig(os.getcwd() + '/S1_panel_A_scree.png')
+
     print("Proportion of Variance Explained : ", np.round(pca.explained_variance_ratio_, 4))
 
     out_sum = np.cumsum(np.round(pca.explained_variance_ratio_, 2))
     print("Cumulative Prop. Variance Explained: ", out_sum)
 
-def elbow_plot(PCA_components):
+def elbow_plot(PCA_components, haralick=False):
 
   xloc = plticker.MultipleLocator(base=1.0) # this locator puts ticks at regular intervals
   yloc = plticker.MultipleLocator(base=100000) # this locator puts ticks at regular intervals
@@ -165,9 +182,11 @@ def elbow_plot(PCA_components):
   ax.tick_params(axis='both', which='major', labelsize=16)
 
   fig.subplots_adjust(left=0.2, right=0.9, bottom=0.2, top=0.9)
+  if haralick:
+      plt.savefig(os.getcwd() + '/S2_panel_B_elbow.png')
+  else:
+      plt.savefig(os.getcwd() + '/S1_panel_B_elbow.png')
 
-  plt.savefig(os.getcwd() + '/elbow.png')
-  plt.show()
 
 def counter(cluster):
     unique, counts = np.unique(cluster, return_counts=True)
@@ -184,7 +203,7 @@ def plotter(label_dict, class_names):
     plt.xlabel('Sub-stage')
     plt.ylabel('Count')
 
-def plot_counts(label_count):
+def plot_counts(label_count, haralick=False):
 
   class_names = {1: '10.1', 2: '10.2', 3: '10.3'}
   #Bar graph with the number of items of different categories clustered in it
@@ -195,9 +214,12 @@ def plot_counts(label_count):
       plt.subplot(2, 2, i)
       plotter(label_count[i-1], class_names)
       plt.title("Cluster " + str(i))
-  plt.savefig(os.getcwd() + '/counts.png')
+  if haralick:
+      plt.savefig(os.getcwd() + '/S2_panel_D_counts.png')
+  else:
+    plt.savefig(os.getcwd() + '/S1_panel_D_counts.png')
 
-def plot_scatter(k_means_labels, kmeans, PCA_components):
+def plot_scatter(k_means_labels, kmeans, PCA_components, haralick=False):
   plt.clf()
   plt.figure()
 
@@ -224,7 +246,10 @@ def plot_scatter(k_means_labels, kmeans, PCA_components):
   #     handle.set_sizes([1.0])
 
   plt.tick_params(axis='both',which='both', bottom=False, top = False, labelbottom=False, labelleft=False)
-  plt.savefig(os.getcwd() + '/scatter.png')
+  if haralick:
+    plt.savefig(os.getcwd() + '/S2_panel_C_scatter.png')
+  else:
+    plt.savefig(os.getcwd() + '/S1_panel_C_scatter.png')
 
 def save_opt_hyperparams(path, exp_name, best_hps):
     today = dt.today()
@@ -242,7 +267,7 @@ def load_opt_hyperparams(path):
     return best_hps
 
 def create_data(path, duplicate_channels, equalize=True):
-    os.chdir(path)
+
     contents = os.listdir(path)
     data = []
     class_dirs = [path + f'/{contents[0]}', path + f'/{contents[1]}']
@@ -464,10 +489,12 @@ def train_traditional_cf_model(train, val, train_label, val_label, name, results
     print('val_label shape:', np.shape(val_label))
 
     #
-    # svc=svm.SVC(probability=True, verbose=1)
-    # model=GridSearchCV(svc,param_grid)
+    if svector:
+        svc=svm.SVC(probability=True, verbose=1)
+        model=GridSearchCV(svc,param_grid)
 
-    model = KNeighborsClassifier(n_neighbors=3)
+    if knn:
+        model = KNeighborsClassifier(n_neighbors=3)
     model.fit(reshaped_train,
                         train_label)
     y_pred=model.predict(reshaped_val)
@@ -611,6 +638,7 @@ def train_model_resnet50(train, val, train_label, val_label, X_test, Y_test, nam
 
     # reshaped_train.astype('float32')
     # reshaped_val.astype('float32')
+
     print("train shape before preprocess {}".format(np_train.shape))
     reshaped_train = preprocess_input(np_train)
     reshaped_val = preprocess_input(np_val)
@@ -682,14 +710,10 @@ def train_model_inception(train, val, train_label, val_label, X_test, Y_test, na
     np_train = np.array(train) / 255
     np_val = np.array(val) / 255
 
-    # reshaped_train = np_train.reshape(-1, 200, 200, 1)
-    # reshaped_val = np_val.reshape(-1, 200, 200, 1)
 
-    # reshaped_train.astype('float32')
-    # reshaped_val.astype('float32')
     print("train shape before preprocess {}".format(np_train.shape))
-    reshaped_train = preprocess_inception(np_train)
-    reshaped_val = preprocess_inception(np_val)
+    reshaped_train = preprocess_input(np_train)
+    reshaped_val = preprocess_input(np_val)
 
     train_label = to_categorical(train_label)
     val_label = to_categorical(val_label, 2)
@@ -856,7 +880,7 @@ def kfoldcv(X, Y, k):
     return X_train, y_train, X_val, y_val
 
 
-def aug_data_2(X_train, y_train, X_val, y_val, X_val_bool):
+def aug_data_2(X_train, y_train, X_val=None, y_val=None, X_val_bool=False):
     X_train_aug = []
     X_val_aug = []
     y_train_aug = []
@@ -898,7 +922,7 @@ def aug_data_2(X_train, y_train, X_val, y_val, X_val_bool):
         return X_train_aug, y_train_aug
 
 def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, shear=False, gblur=False, crop=False,
-                 randcomb=False, mobius=False, allcomb_full=False, resnet=False, inception=False, limb=False):
+                 randcomb=False, mobius=False, allcomb_sparse=False, allcomb_full=False, resnet=False, inception=False, limb=False):
     print("resnet is "+ str(resnet))
     print("inception is " + str(inception))
     X_val_aug = []
@@ -925,7 +949,7 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
         for j in range(0, len(X_train[
                                   i])):  # for every image in 149 long list of images 0 -> 149 #uncomment for full length (very slow)
 
-            # for j in range(0, 3): #todo try putting this inside the rotation loop so that each rotated image has a different mobius transform
+            # for j in range(0, 3):
             if mobius:
                 # M must be >1
                 # The smaller M is, the more "normal" the output looks
@@ -950,24 +974,29 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                 rotated_labels.append(y_train[i][j])
 
             for angle in np.arange(0, 360, 10):
-                ## TODO fix baseline
+
                 if cutout:
                     cutout = iaa.Cutout(nb_iterations=(1, 3),
-                                        size=0.2)  # TODO try different number of iterations and various alternative args from imagaug docs
+                                        size=0.2)  #
                     feature = cutout(image=X_train[i][j])
+
                 if shear:
                     shear = iaa.ShearX((-20, 20))
                     feature = shear(image=X_train[i][j])
+
                 if gblur:
                     gblur = iaa.GaussianBlur(sigma=(0.0, 5.0))  # sigma = 5 was originally used - not random
                     feature = gblur(image=X_train[i][j])
+
                 if crop:
                     crop = iaa.Crop(percent=(0.0, 0.3))  # originally every img was cropped 30 times
                     feature = crop(image=X_train[i][j])
+
                 if randcomb:
                     seq = iaa.SomeOf(1, [iaa.Cutout(nb_iterations=(1, 3)), iaa.GaussianBlur(sigma=(0.0, 3.0)),
                                          iaa.ShearX((-20, 20))])  # Just one
                     feature = seq(image=X_train[i][j])
+
                 # if allcomb_sparse:
                 #     seq = iaa.Sequential([iaa.Cutout(nb_iterations=(1, 3)), iaa.GaussianBlur(sigma=(0.0, 3.0)),
                 #                          iaa.ShearX((-20, 20))], random_order=True)
@@ -976,7 +1005,7 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                 if allcomb_full:
 
                     cutout = iaa.Cutout(nb_iterations=(1, 3),
-                                        size=0.2)  # TODO try different number of iterations and various alternative args from imagaug docs
+                                        size=0.2)
                     cutout_feature = cutout(image=X_train[i][j])
 
                     shear = iaa.ShearX((-20, 20))
@@ -1007,7 +1036,7 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                 rotate = iaa.geometric.Affine(rotate=angle)  # set up augmenter
                 feature = rotate(image=X_train[i][j])  # rotate each image 36 times
                 feature = Image.fromarray(feature)
-                if not resnet or inception:
+                if not resnet and not inception:
 
                     feature = feature.convert("L")
                 feature = np.array(feature)
@@ -1022,9 +1051,9 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
 
 
 
-        print("number of training images post augmentation {}".format(len(X_train_aug[0])))  # todo assertion
+        print("number of training images post augmentation {}".format(len(X_train_aug[0])))
 
-        # print("allcomb status {}".format(allcomb_full))
+
         if mobius:
 
             assert len(X_train_aug[0]) == (len(X_train[0]) * len(
@@ -1038,14 +1067,14 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                               10))) * 5, "X_train_aug is not equal to X_train multiplied by the number of transformations"
             else:
 
-                assert len(X_train_aug[0]) == (len(X_train[0]) * len(
-                    np.arange(0, 360,
-                              10)) * 4), "X_train_aug is not equal to X_train multiplied by the number of transformations"
+                assert len(X_train_aug[0]) == len(X_train[0]) * (len(np.arange(0, 360, 10)) * 4), "X_train_aug is not equal to X_train multiplied by the number of transformations"
+
         if limb and (not allcomb_full):
             assert len(X_train_aug[0]) == (len(X_train[0]) * len(
                 np.arange(0, 360,
                           10)))*2, "X_train_aug is not equal to X_train multiplied by the number of transformations"
-        else:
+
+        elif not allcomb_full:
 
             assert len(X_train_aug[0]) == (len(X_train[0]) * len(
                 np.arange(0, 360,
@@ -1084,7 +1113,7 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
 
                 if cutout:
                     cutout = iaa.Cutout(nb_iterations=(1, 3),
-                                        size=0.2)  # TODO try different number of iterations and various alternative args from imagaug docs
+                                        size=0.2)  #
                     feature = cutout(image=X_val[i][j])
                 if shear:
                     shear = iaa.ShearX((-20, 20))
@@ -1103,7 +1132,7 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                 if allcomb_full:
 
                     cutout = iaa.Cutout(nb_iterations=(1, 3),
-                                        size=0.2)  # TODO try different number of iterations and various alternative args from imagaug docs
+                                        size=0.2)  #
                     cutout_feature = cutout(image=X_val[i][j])
 
                     shear = iaa.ShearX((-20, 20))
@@ -1141,7 +1170,7 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                 feature = rotate(image=X_val[i][j])  # rotate each image 36 times
                 feature = Image.fromarray(feature)
 
-                if not resnet or inception:
+                if not resnet and not inception:
                     feature = feature.convert("L")
                 feature = np.array(feature)
 
@@ -1213,7 +1242,7 @@ def augment_data_hd_cutout(X_train, y_train, X_val, y_val, cutout=False, randcom
 
             if cutout:
                 cutout = iaa.Cutout(nb_iterations=(1, 3),
-                                    size=0.2)  # TODO try different number of iterations and various alternative args from imagaug docs
+                                    size=0.2)  #
                 feature = cutout(image=X_train[i])
 
             if randcomb:
@@ -1233,7 +1262,7 @@ def augment_data_hd_cutout(X_train, y_train, X_val, y_val, cutout=False, randcom
 
             if cutout:
                 cutout = iaa.Cutout(nb_iterations=(1, 3),
-                                    size=0.2)  # TODO try different number of iterations and various alternative args from imagaug docs
+                                    size=0.2)  #
                 feature = cutout(image=X_val[i])
 
             if randcomb:
@@ -1248,131 +1277,7 @@ def augment_data_hd_cutout(X_train, y_train, X_val, y_val, cutout=False, randcom
             y_val_aug.append(y_val[i])
 
     return X_train_aug, X_val_aug, y_train_aug, y_val_aug
-#
 
-# def augment_data_holdout(X_train, y_train, X_val, y_val, baseline=False, cutout=False, shear=False, gblur=False,
-#                          crop=False, randcomb=False, mobius=False):
-#     X_val_aug = []
-#     X_train_aug = []
-#     y_train_aug = []
-#     y_val_aug = []
-#     X_train = np.array(X_train)
-#     X_val = np.array(X_val)
-#
-#     # Mode can be chosen from 'reflect’, ‘constant’, ‘nearest’, ‘mirror’, ‘wrap’
-#     mode = 'constant'
-#
-#     # if user_defined == False, then it is random (recommended)
-#     user_defined = False
-#     start_points = 32, 16, 16, 32, 32, 48
-#     end_points = 16, 32, 32, 48, 48, 32
-#     print('X_train_len_{}'.format(len(X_train)))
-#     print('X_val_len_{}'.format(len(X_val)))
-#     print('y_train_len_{}'.format(len(y_train)))
-#     print('y_val_len_{}'.format(len(y_val)))
-#
-#     for i in range(0, len(X_train)):  # for every 149 long list of images 0 -> 10
-#
-#         rotated_features = []  # empty temp list of rotated images
-#         rotated_labels = []  # empty temp list of labels
-#         X_train = np.array(X_train)  # convert list of images to np.array - seems to be necessary for imgaug
-#
-#         if mobius:
-#             # M must be >1
-#             # The smaller M is, the more "normal" the output looks
-#             M = np.linspace(5, 6, 20)
-#             M = np.random.choice(M)
-#             print(M)
-#
-#             img = X_train[i]
-#             feature, uninterpolated_image = mobius_fast_interpolation('example', True, img,
-#                                                                       M,
-#                                                                       mode=mode,
-#                                                                       output_height=200,
-#                                                                       output_width=200,
-#                                                                       user_defined=user_defined,
-#                                                                       start_points=start_points,
-#                                                                       end_points=end_points)
-#             feature = np.array(feature)
-#
-#         for angle in np.arange(0, 360, 10):
-#             # TODO fix baseline
-#             if cutout:
-#                 cutout = iaa.Cutout(nb_iterations=(1, 3),
-#                                     size=0.2)  # TODO try different number of iterations and various alternative args from imagaug docs
-#                 feature = cutout(image=X_train[i])
-#             if shear:
-#                 shear = iaa.ShearX((-20, 20))
-#                 feature = shear(image=X_train[i])
-#             if gblur:
-#                 gblur = iaa.GaussianBlur(sigma=(0.0, 5.0))  # sigma = 5 was originally used - not random
-#                 feature = gblur(image=X_train[i])
-#             if crop:
-#                 crop = iaa.Crop(percent=(0.0, 0.3))  # originally every img was cropped 30 times
-#                 feature = crop(image=X_train[i])
-#             if randcomb:
-#                 seq = iaa.SomeOf(1, [iaa.Cutout(nb_iterations=(1, 3)), iaa.GaussianBlur(sigma=(0.0, 3.0)),
-#                                      iaa.ShearX((-20, 20))])  # Just one
-#                 feature = seq(image=X_train[i])
-#             else:
-#                 rotate = iaa.geometric.Affine(rotate=angle)  # set up augmenter
-#                 feature = rotate(image=X_train[i])  # rotate each image 36 times
-#                 rotated_features.append(feature)
-#                 rotated_labels.append(y_train[i])
-#
-#         X_train_aug.append(rotated_features)  # append to 36 rotated images to temp
-#         X_val_aug.append(rotated_labels)
-#
-#         print('X_train_aug len is {}'.format(len(X_train_aug[i])))
-#         print('X_train_len is {}'.format(len(X_train)))
-#         assert len(X_train_aug) == len(X_train) * len(
-#             np.arange(0, 360, 10)), "X_train_aug is not equal to X_train multiplied by the number of transformations"
-#
-#     for i in range(0, len(X_val)):  # for every 149 long list of images 0 -> 10 #TODO implement mobius for val
-#
-#         rotated_features = []  # empty temp list of rotated images
-#         rotated_labels = []  # empty temp list of labels
-#         X_val = np.array(X_val)  # convert list of images to np.array - seems to be necessary for imgaug
-#
-#         for angle in np.arange(0, 360, 10):
-#
-#             if cutout:
-#                 cutout = iaa.Cutout(nb_iterations=(1, 3),
-#                                     size=0.2)  # TODO try different number of iterations and various alternative args from imagaug docs
-#                 feature = cutout(image=X_val[i])
-#             if shear:
-#                 shear = iaa.ShearX((-20, 20))
-#                 feature = shear(image=X_val[i])
-#             if gblur:
-#                 gblur = iaa.GaussianBlur(sigma=(0.0, 5.0))  # sigma = 5 was originally used - not random
-#                 feature = gblur(image=X_val[i])
-#             if crop:
-#                 crop = iaa.Crop(percent=(0.0, 0.3))  # originally every img was cropped 30 times
-#                 feature = crop(image=X_val[i])
-#             if randcomb:
-#                 seq = iaa.SomeOf(1, [iaa.Cutout(nb_iterations=(1, 3)), iaa.GaussianBlur(sigma=(0.0, 3.0)),
-#                                      iaa.ShearX((-20, 20))])  # Just one
-#                 feature = seq(image=X_val[i])
-#             if baseline:
-#                 rotate = iaa.geometric.Affine(rotate=angle)  # set up augmenter
-#                 feature = rotate(image=feature)  # rotate each image 36 times
-#                 rotated_features.append(feature)  # append to 36 rotated images to temp
-#                 rotated_labels.append(y_val[i])
-#
-#         X_val_aug.append(
-#             rotated_features)  # when finished all j append 149 long list of 36 long list of rotated imgs, proceed to next i
-#         y_val_aug.append(rotated_labels)
-#
-#     print(len(X_train))
-#     print(len(X_train[i]))
-#
-#     print(len(X_train_aug))
-#     print(len(X_train_aug[i]))
-#
-#     # assert len(X_train_aug[0]) == len(X_train[0]) * len(
-#     #     np.arange(0, 360, 10)), "X_train_aug is not equal to X_train multiplied by the number of transformations"
-#
-#     return X_train_aug, y_train_aug, X_val_aug, y_val_aug
 
 
 import numpy as np
@@ -1383,7 +1288,6 @@ from numpy import *
 from random import random
 
 
-# TODO decide whether I need random seeds
 
 def shift_func(coords, a, b, c, d):
     """ Define the mobius transformation, though backwards """

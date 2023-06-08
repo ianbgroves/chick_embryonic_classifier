@@ -17,21 +17,21 @@ from tf_keras_vis.saliency import Saliency
 from tensorflow.keras import backend as K
 import pickle as pkl # module for serialization
 import math
-from binary_utils import *
+from colab_utils import *
 load = False
 resnet = False
 today = dt.today()
 date = today.strftime("%b-%d-%Y")
 
-os.chdir(r'G:/My Drive/Python_projects/classifier/binary_classification')
-exp_name, baseline, cutout, shear, gblur, crop, randcomb, mobius, allcomb_sparse, allcomb_full = read_args()
+exp_name, baseline, cutout, shear, gblur, crop, randcomb, mobius, allcomb_sparse, allcomb_full, resnet, inception = read_args()
 print('exp_name '+exp_name)
+path = os.path.join(os.getcwd(), 'data_control_treated')
 
-allcomb_path = r"G:\My Drive\Python_projects\classifier\binary_classification\accurate_staging_deep_learning_paper\final_model"
+allcomb_path = "final_model/final_model"
 model = keras.models.load_model(allcomb_path)
 
 if load:
-    split_dict = load_test_set(r"saved_test_sets\limb_baseline_exploration_only_conv_trainable_05_04_test_3_Apr-05-2023\pkl_splits")
+    split_dict = load_test_set("PATH_TO_TEST_SET")
 
     X = split_dict['X']
     Y = split_dict['Y']
@@ -51,7 +51,7 @@ if load:
 
 else:
 
-    data = create_data(os.path.join(os.getcwd(), r'labeled_data_limb'), duplicate_channels=False, limb=True)
+    data = create_data(path, duplicate_channels=False, equalize=True)
 
     print(len(data))
 
@@ -69,11 +69,11 @@ print(
     "ratios of labels in the data set are {} {} ".format(round(Y.count(0) / len(Y), 2), round(Y.count(1) / len(Y), 2)))
 
 X, X_test, Y, y_test = train_test_split(X, Y, test_size=0.2, stratify=Y)
-print("ratios of labels in the test set are {} : {} ".format(round(y_test.count(0) / len(y_test), 1),
-                                                                 round(y_test.count(1) / len(y_test), 1)))
+print("ratios of labels in the test set are {} : {} ".format(round(y_test.count(0) / len(y_test), 2),
+                                                                 round(y_test.count(1) / len(y_test), 2)))
 
 if not load:
-  split_dict = save_test_set('saved_test_sets', exp_name, X, X_test, Y, y_test)
+    split_dict = save_test_set(os.path.join(os.getcwd(), 'saved_test_sets'), exp_name, X, X_test, Y, y_test)
 
 # Kfold CV (k=10)
 X_train, y_train, X_val, y_val = kfoldcv(X, Y, k=10)
