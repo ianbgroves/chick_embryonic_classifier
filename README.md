@@ -15,7 +15,6 @@
 ---
 With the repository as the working directory:
 
-
 # Neural network training (Tables 1, S2-3 tables)
 
 Use the following tags for the different augmentation regimes described in the paper.
@@ -37,22 +36,18 @@ Or, for InceptionV3/ResNet50 re-training, set either the resnet/inception boolea
 and then run ``` python training_brain.py --baseline``` (e.g.)
 
 
-For the unsupervised clustering in 
-Fig S1
-run
+For the unsupervised clustering (Fig S1)
+
 ```rb
 python pca_k_means.py
 ```
-For the unsupervised clustering on Haralick features run
-Fig S2
+For the unsupervised clustering on Haralick features (Fig S2)
 ```rb
 python feature_extraction.py
 ```
 
-
-
 # Traditional classifiers (Support vector machine, K nearest neighbours, Random Forest classifier, S1 Table)
-run 
+
 ```rb
 training_svm_rfc_knn.py
 ```
