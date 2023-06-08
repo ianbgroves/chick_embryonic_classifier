@@ -30,7 +30,7 @@ Use the following tags for the different augmentation regimes described in the p
 *   ```--mobius``` for 'Möbius transformations'
 
 
-For our model, run ``` python training_brain.py --baseline``` (e.g.)
+For our model, run ``` python training_brain.py -exp training_test --baseline``` (e.g.)
 
 Or, for InceptionV3/ResNet50 re-training, set either the resnet/inception booleans to true in ``` training_brain.py ```\
 and then run ``` python training_brain.py --baseline``` (e.g.)
