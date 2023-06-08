@@ -8,13 +8,12 @@
 1. Install [Anaconda](https://docs.anaconda.com/anaconda/install/index.html)
 2. Clone the repository
 3. From the command line, cd to the repository e.g. ```cd documents/github/chick_embryo_DCNN_classifier```
-4. run ```conda create --name chick_dcnn_classifier python=3.6```
+4. run ```conda create --name chick_dcnn_classifier python=3.10```
 5. run ```conda activate chick_dcnn_classifier```
 6. run ```pip install --no-deps -r requirements.txt``` to install all packages needed.
 
 ---
 With the repository as the working directory:
-
 
 # Neural network training (Tables 1, S2-3 tables)
 
@@ -31,28 +30,31 @@ Use the following tags for the different augmentation regimes described in the p
 *   ```--mobius``` for 'Möbius transformations'
 
 
-For our model, run ``` python training_our_model.py --baseline``` (e.g.)
+For our model, run  (e.g.)
 
-Or, for InceptionV3/ResNet50 re-training, set either the resnet/inception booleans to true in ``` training_brain.py ```\
-and then run ``` python training_brain.py --baseline``` (e.g.)\
+```rb
+python training_brain.py -exp training_test --baseline
+```
+
+Or, for InceptionV3/ResNet50 re-training, set either the resnet/inception booleans to true by running (e.g.) 
+
+```rb
+python training_brain.py -exp resnet_test --baseline --resnet
+``` 
 
 
-For the unsupervised clustering in 
-Fig S1
-run
+For the unsupervised clustering (Fig S1)
+
 ```rb
 python pca_k_means.py
 ```
-For the unsupervised clustering on Haralick features run
-Fig S2
+For the unsupervised clustering on Haralick features (Fig S2)
 ```rb
 python feature_extraction.py
 ```
 
-
-
 # Traditional classifiers (Support vector machine, K nearest neighbours, Random Forest classifier, S1 Table)
-run 
+
 ```rb
 training_svm_rfc_knn.py
 ```
