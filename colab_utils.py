@@ -629,7 +629,7 @@ def train_model(train, val, train_label, val_label, X_test, Y_test, name, result
 
 
 def train_model_resnet50(train, val, train_label, val_label, X_test, Y_test, name, results, hyperparams, i, model=None,
-                         pretrained=False):
+                         pretrained=False, freeze=False):
     np_train = np.array(train) / 255
     np_val = np.array(val) / 255
 
@@ -660,6 +660,12 @@ def train_model_resnet50(train, val, train_label, val_label, X_test, Y_test, nam
         print('building new resnet50 model')
         resnet50_model = ResNet50(include_top=False, weights='imagenet', input_tensor=None, input_shape=(200, 200, 3),
                                   pooling=None)
+        if freeze:
+            print("freezing base ResNet layers")
+            num_layers_to_freeze = 10
+            for layer in resnet50_model.layers[:num_layers_to_freeze]:
+                layer.trainable = False
+
         flattened_output = tf.keras.layers.Flatten()(resnet50_model.output)
         fc_classification_layer = tf.keras.layers.Dense(2, activation='softmax')(flattened_output)
         model = tf.keras.models.Model(inputs=resnet50_model.input, outputs=fc_classification_layer)

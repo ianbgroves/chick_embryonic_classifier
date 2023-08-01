@@ -9,12 +9,12 @@ date = today.strftime("%b-%d-%Y")
 from colab_utils import *
 
 load = False
-resnet = False
 inception = False
-
+resnet = False
 exp_name, baseline, cutout, shear, gblur, crop, randcomb, mobius, allcomb_sparse, allcomb_full, resnet, inception = read_args()
 print('exp_name '+exp_name)
 path = os.path.join(os.getcwd(), 'data_10_early_late')
+
 
 if load:
 
@@ -96,7 +96,7 @@ if resnet and not inception:
         print("re-training_resnet50_model_{}".format(i))
         print("train shape before sending to resnet {}".format(np.array(X_train_aug[i]).shape))
         results = train_model_resnet50(X_train_aug[i], X_val_aug[i], y_train_aug[i], y_val_aug[i], X_test, y_test,
-                                       exp_name, results, hyperparams, i, model = None, pretrained= False)
+                                       exp_name, results, hyperparams, i, model = None, pretrained= False, freeze=True)
         K.clear_session()
         tf.compat.v1.reset_default_graph()
         gc.collect()
