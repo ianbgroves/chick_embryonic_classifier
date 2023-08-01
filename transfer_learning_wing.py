@@ -18,15 +18,18 @@ from tensorflow.keras import backend as K
 import pickle as pkl # module for serialization
 import math
 from colab_utils import *
+
+
 load = False
 resnet = False
+pre_cutout = True
 today = dt.today()
 date = today.strftime("%b-%d-%Y")
 
 exp_name, baseline, cutout, shear, gblur, crop, randcomb, mobius, allcomb_sparse, allcomb_full, resnet, inception = read_args()
 print('exp_name '+exp_name)
 path = os.path.join(os.getcwd(), 'data_control_treated')
-
+pre_cutout_path = os.path.join(os.getcwd(), 'data_control_treated_pre_cutout')
 allcomb_path = "final_model/final_model"
 model = keras.models.load_model(allcomb_path)
 
@@ -51,8 +54,12 @@ if load:
 
 else:
 
-    data = create_data(path, duplicate_channels=False, equalize=True)
-
+    if pre_cutout:
+        print("Using dataset where SHH is manually cutout")
+        data = create_data(pre_cutout_path, duplicate_channels=False, equalize=True)
+    else:
+        print("Using regular dataset")
+        data = create_data(path, duplicate_channels=False, equalize=True)
     print(len(data))
 
     data_list = []
