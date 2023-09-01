@@ -63,6 +63,15 @@ Then, run
 ```rb
 python saliency_limb.py
 ```
+
+# In situ prediction (Fig 4)
+
+For the inference on brightfield images paired to in situ hybridisation analyses, run 
+
+```rb
+python in_situ_predict.py
+```
+
 # Supplementary Figs and tables
 For the unsupervised clustering (Fig S1)
 
