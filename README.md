@@ -52,7 +52,7 @@ python transfer_learning_wing.py
 
 # Saliency analysis (Figs 3 and 5)
 
-For brain saliency analyses (Fig 3), compile final model part 1 and 2 as above.
+For brain saliency analyses (Fig 3), compile final model parts as above.
 Then, run 
 ```rb
 python saliency_brain.py
