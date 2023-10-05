@@ -43,7 +43,7 @@ python training_brain.py -exp resnet_test --baseline --resnet
 ``` 
 
 For retraining the brain classifier on the wing bud dataset (Table 1), first the brain model needs to be unzipped using WinRAR - as Github doesn't allow hosting of single files >100MB.\
-Select 'final_model.part1' and 'final_model.part2' and select WinRAR > extract to "final_model\"
+Select 'final_model.part1' and 'final_model.part2' (etc.) and select WinRAR > extract to "final_model\"
 
 Then, run
 ```rb
