@@ -1,48 +1,71 @@
-import os, sys
 import cv2
-from pathlib import Path
-from random import seed, shuffle
-import numpy as np
-# from numba import cuda
-from imgaug import augmenters as iaa
 import joblib
-from sklearn.model_selection import train_test_split
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import matplotlib.ticker as plticker
+import numpy as np
+import os
+import pickle as pkl
+import random
+import seaborn as sns
+import sys
 from PIL import Image, ImageOps
+from argparse import ArgumentParser
+from datetime import date as dt
+from datetime import date as dt
+from imgaug import augmenters as iaa
+from pathlib import Path
+from random import random
+from random import seed, shuffle
+from random import shuffle
+from scipy.ndimage import geometric_transform, map_coordinates
+from sklearn import metrics
+from sklearn import svm
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import LeaveOneOut, KFold
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.utils import to_categorical
+
+sns.set_theme(style="white")
+
+import tensorflow as tf  # version 2.5
+from tensorflow.keras import layers
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import LeakyReLU, Softmax
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, SeparableConv2D
+from tensorflow.keras.layers import Dense, Flatten, Dropout, Reshape, Activation
+from tensorflow.keras.layers import InputLayer, Input
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras.optimizers import Adam, Adagrad, Adadelta, Adamax, SGD, Ftrl, Nadam, RMSprop
+from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import backend as K
+from tensorflow.keras import regularizers
+from tensorflow.keras import Sequential
+
 from tensorflow.keras.preprocessing.image import load_img
 from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.vgg16 import preprocess_input as preprocess_vgg
-from sklearn.model_selection import LeaveOneOut, KFold
-import matplotlib.pyplot as plt
-from datetime import date as dt
-import pickle as pkl  # module for serialization
-import matplotlib.pyplot as plt
-# resnet50 imports
+# Resnet imports
 from tensorflow.keras.applications.resnet50 import ResNet50
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.resnet50 import preprocess_input
-import matplotlib.ticker as plticker
-import matplotlib as mpl
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-
-from sklearn import svm
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from tensorflow.keras.utils import to_categorical
-from sklearn import metrics
-from random import shuffle
 
 # inceptionv3 imports
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras.applications.inception_v3 import preprocess_input as preprocess_inception
 
-from argparse import ArgumentParser
-import seaborn as sns
-sns.set_theme(style="white")
+import gc
 
-def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False, randcomb=False, mobius=False, allcomb_sparse=False,
+def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False, randcomb=False, mobius=False,
+              allcomb_sparse=False,
               allcomb_full=False, resnet=False, inception=False):
     parser = ArgumentParser(
         description='provide an experiment name and one augmentation, type --help for details/list of augmentations')
@@ -118,13 +141,14 @@ def read_args(baseline=False, cutout=False, shear=False, gblur=False, crop=False
             break
     return exp_name, baseline, cutout, shear, gblur, crop, randcomb, mobius, allcomb_sparse, allcomb_full, resnet, inception
 
+
 def scree_plot(pca, haralick=False):
     import matplotlib.ticker as plticker
 
     xloc = plticker.MultipleLocator(base=1.0)  # this locator puts ticks at regular intervals
     yloc = plticker.MultipleLocator(base=100000)  # this locator puts ticks at regular intervals
 
-    fig, ax = plt.subplots(figsize=(5,5))
+    fig, ax = plt.subplots(figsize=(5, 5))
     PC_values = np.arange(pca.n_components_) + 1
     ax.plot(PC_values, pca.explained_variance_ratio_, color='red', linewidth=2.0)
     ax.xaxis.set_major_locator(xloc)
@@ -149,43 +173,42 @@ def scree_plot(pca, haralick=False):
     out_sum = np.cumsum(np.round(pca.explained_variance_ratio_, 2))
     print("Cumulative Prop. Variance Explained: ", out_sum)
 
+
 def elbow_plot(PCA_components, haralick=False):
+    xloc = plticker.MultipleLocator(base=1.0)  # this locator puts ticks at regular intervals
+    yloc = plticker.MultipleLocator(base=100000)  # this locator puts ticks at regular intervals
 
-  xloc = plticker.MultipleLocator(base=1.0) # this locator puts ticks at regular intervals
-  yloc = plticker.MultipleLocator(base=100000) # this locator puts ticks at regular intervals
+    wcss = []
 
-  wcss = []
+    for i in range(1, 11):
+        kmeans = KMeans(n_clusters=i, init='k-means++', max_iter=300, n_init=10, random_state=0)
+        kmeans.fit(PCA_components)
+        wcss.append(kmeans.inertia_)
 
-  for i in range(1,11):
-    kmeans = KMeans(n_clusters=i, init ='k-means++', max_iter=300,  n_init=10, random_state=0 )
-    kmeans.fit(PCA_components)
-    wcss.append(kmeans.inertia_)
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ax.plot(range(1, 11), wcss, color='darkcyan', linewidth=2.0)
+    # ax.xaxis.set_major_locator(xloc)
+    # ax.yaxis.set_major_locator(yloc)
+    # ax.set_ylim(0,(round(max(wcss), -5))+1)
+    print(wcss)
+    ax.set_ylim(0, round(max(wcss), -1) + 10)
 
-  fig, ax = plt.subplots(figsize=(5, 5))
-  ax.plot(range(1,11),wcss, color= 'darkcyan', linewidth = 2.0)
-  # ax.xaxis.set_major_locator(xloc)
-  # ax.yaxis.set_major_locator(yloc)
-  # ax.set_ylim(0,(round(max(wcss), -5))+1)
-  print(wcss)
-  ax.set_ylim(0, round(max(wcss), -1) + 10)
+    ax.set_xlabel('k', fontsize=20, fontweight='bold')
+    ax.set_ylabel('WCSS', fontsize=20, fontweight='bold')
 
+    ax.axes.ticklabel_format(axis='y', style='sci', scilimits=(0, 0), useMathText=True)
+    ax.spines['top'].set_lw(2)
+    ax.spines['bottom'].set_lw(2)
+    ax.spines['left'].set_lw(2)
+    ax.spines['right'].set_lw(2)
 
-  ax.set_xlabel('k', fontsize=20, fontweight='bold')
-  ax.set_ylabel('WCSS', fontsize=20, fontweight='bold')
+    ax.tick_params(axis='both', which='major', labelsize=16)
 
-  ax.axes.ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=True)
-  ax.spines['top'].set_lw(2)
-  ax.spines['bottom'].set_lw(2)
-  ax.spines['left'].set_lw(2)
-  ax.spines['right'].set_lw(2)
-
-  ax.tick_params(axis='both', which='major', labelsize=16)
-
-  fig.subplots_adjust(left=0.2, right=0.9, bottom=0.2, top=0.9)
-  if haralick:
-      plt.savefig(os.getcwd() + '/S2_panel_B_elbow.png')
-  else:
-      plt.savefig(os.getcwd() + '/S1_panel_B_elbow.png')
+    fig.subplots_adjust(left=0.2, right=0.9, bottom=0.2, top=0.9)
+    if haralick:
+        plt.savefig(os.getcwd() + '/S2_panel_B_elbow.png')
+    else:
+        plt.savefig(os.getcwd() + '/S1_panel_B_elbow.png')
 
 
 def counter(cluster):
@@ -193,9 +216,10 @@ def counter(cluster):
     label_index = dict(zip(unique[1:4], counts[1:4]))
     return label_index
 
-def plotter(label_dict, class_names):
 
-    plt.bar(range(len(label_dict)), list(label_dict.values()), align='center', width=0.8, edgecolor='black', linewidth=1, color='darkgreen')
+def plotter(label_dict, class_names):
+    plt.bar(range(len(label_dict)), list(label_dict.values()), align='center', width=0.8, edgecolor='black',
+            linewidth=1, color='darkgreen')
     a = []
     for i in [*label_dict]: a.append(class_names[i])
     plt.xticks(range(len(label_dict)), list(a), rotation=0, rotation_mode='anchor')
@@ -203,53 +227,55 @@ def plotter(label_dict, class_names):
     plt.xlabel('Sub-stage')
     plt.ylabel('Count')
 
-def plot_counts(label_count, haralick=False):
 
-  class_names = {1: '10.1', 2: '10.2', 3: '10.3'}
-  #Bar graph with the number of items of different categories clustered in it
-  plt.figure()
-  plt.subplots_adjust(wspace = 0.8)
-  mpl.rcParams['axes.linewidth'] = 2
-  for i in range (1,3):
-      plt.subplot(2, 2, i)
-      plotter(label_count[i-1], class_names)
-      plt.title("Cluster " + str(i))
-  if haralick:
-      plt.savefig(os.getcwd() + '/S2_panel_D_counts.png')
-  else:
-    plt.savefig(os.getcwd() + '/S1_panel_D_counts.png')
+def plot_counts(label_count, haralick=False):
+    class_names = {1: '10.1', 2: '10.2', 3: '10.3'}
+    # Bar graph with the number of items of different categories clustered in it
+    plt.figure()
+    plt.subplots_adjust(wspace=0.8)
+    mpl.rcParams['axes.linewidth'] = 2
+    for i in range(1, 3):
+        plt.subplot(2, 2, i)
+        plotter(label_count[i - 1], class_names)
+        plt.title("Cluster " + str(i))
+    if haralick:
+        plt.savefig(os.getcwd() + '/S2_panel_D_counts.png')
+    else:
+        plt.savefig(os.getcwd() + '/S1_panel_D_counts.png')
+
 
 def plot_scatter(k_means_labels, kmeans, PCA_components, haralick=False):
-  plt.clf()
-  plt.figure()
+    plt.clf()
+    plt.figure()
 
-  ax = sns.scatterplot(x=PCA_components[0], y=PCA_components[1], hue=k_means_labels, palette = ['orange', 'blue'])
-  ax = sns.scatterplot(x=kmeans.cluster_centers_[:, 0], y=kmeans.cluster_centers_[:, 1], color= 'r', s = 100)
+    ax = sns.scatterplot(x=PCA_components[0], y=PCA_components[1], hue=k_means_labels, palette=['orange', 'blue'])
+    ax = sns.scatterplot(x=kmeans.cluster_centers_[:, 0], y=kmeans.cluster_centers_[:, 1], color='r', s=100)
 
-  ax.set_ylabel('PC 2', fontsize = 14, fontweight='bold')
-  ax.set_xlabel('PC 1', fontsize = 14, fontweight='bold')
+    ax.set_ylabel('PC 2', fontsize=14, fontweight='bold')
+    ax.set_xlabel('PC 1', fontsize=14, fontweight='bold')
 
-  ax.spines['top'].set_lw(2)
-  ax.spines['bottom'].set_lw(2)
-  ax.spines['left'].set_lw(2)
-  ax.spines['right'].set_lw(2)
+    ax.spines['top'].set_lw(2)
+    ax.spines['bottom'].set_lw(2)
+    ax.spines['left'].set_lw(2)
+    ax.spines['right'].set_lw(2)
 
-  # Define a dictionary of cluster labels to colors
-  cluster_colors = {1: 'orange', 2: 'blue'}
+    # Define a dictionary of cluster labels to colors
+    cluster_colors = {1: 'orange', 2: 'blue'}
 
-  # Create a custom legend with the desired labels and colors
-  handles = [plt.plot([], [], marker="o", ms=10, ls="", mec=None, color=color,
-                      label=label)[0] for label, color in cluster_colors.items()]
-  ax.legend(handles=handles, labels=cluster_colors.keys(), title="Cluster", loc="upper right")
+    # Create a custom legend with the desired labels and colors
+    handles = [plt.plot([], [], marker="o", ms=10, ls="", mec=None, color=color,
+                        label=label)[0] for label, color in cluster_colors.items()]
+    ax.legend(handles=handles, labels=cluster_colors.keys(), title="Cluster", loc="upper right")
 
-  # for handle in lgnd.legendHandles:
-  #     handle.set_sizes([1.0])
+    # for handle in lgnd.legendHandles:
+    #     handle.set_sizes([1.0])
 
-  plt.tick_params(axis='both',which='both', bottom=False, top = False, labelbottom=False, labelleft=False)
-  if haralick:
-    plt.savefig(os.getcwd() + '/S2_panel_C_scatter.png')
-  else:
-    plt.savefig(os.getcwd() + '/S1_panel_C_scatter.png')
+    plt.tick_params(axis='both', which='both', bottom=False, top=False, labelbottom=False, labelleft=False)
+    if haralick:
+        plt.savefig(os.getcwd() + '/S2_panel_C_scatter.png')
+    else:
+        plt.savefig(os.getcwd() + '/S1_panel_C_scatter.png')
+
 
 def save_opt_hyperparams(path, exp_name, best_hps):
     today = dt.today()
@@ -261,13 +287,14 @@ def save_opt_hyperparams(path, exp_name, best_hps):
     with open(split_save_path, 'wb') as pickle_file:
         pkl.dump(to_save, pickle_file)
 
+
 def load_opt_hyperparams(path):
     with open(path, 'rb') as pickle_file:
         best_hps = pkl.load(pickle_file)
     return best_hps
 
-def create_data(path, duplicate_channels, equalize=True):
 
+def read_imgs(path, duplicate_channels, equalize=True):
     contents = os.listdir(path)
     data = []
     class_dirs = [path + f'/{contents[0]}', path + f'/{contents[1]}']
@@ -276,7 +303,7 @@ def create_data(path, duplicate_channels, equalize=True):
         try:
             img_array = Image.open(class_dirs[0] + '/{}'.format(img)).convert('L')
             if equalize:
-               img_array = ImageOps.equalize(img_array, mask=None)
+                img_array = ImageOps.equalize(img_array, mask=None)
             if duplicate_channels:
                 # img_array = img_array.convert('RGB')
                 img_array = Image.open(class_dirs[0] + '/{}'.format(img)).convert('RGB')
@@ -290,7 +317,7 @@ def create_data(path, duplicate_channels, equalize=True):
         try:
             img_array = Image.open(class_dirs[1] + '/{}'.format(img)).convert('L')
             if equalize:
-               img_array = ImageOps.equalize(img_array, mask=None)
+                img_array = ImageOps.equalize(img_array, mask=None)
             if duplicate_channels:
                 # img_array = img_array.convert('RGB')
                 img_array = Image.open(class_dirs[1] + '/{}'.format(img)).convert('RGB')
@@ -301,6 +328,58 @@ def create_data(path, duplicate_channels, equalize=True):
             pass
     return data
 
+def create_data_save_test_set(path, mobius, resnet, inception, exp_name):
+
+    if mobius or resnet or inception:
+        data = read_imgs(path, duplicate_channels=True, equalize=True)
+    else:
+        data = read_imgs(path, duplicate_channels=False, equalize=True)
+
+    print(len(data))
+    # should be 152
+
+    data_list = []
+    data_list.append(data[0:len(data)])
+
+    X = []
+    Y = []
+
+    for i in data_list:
+        for feature, label in i:
+            X.append(feature)
+            Y.append(label)
+
+    print(
+        "ratios of labels in the data set are {} : {}".format(round(Y.count(0) / len(Y), 2),
+                                                              round(Y.count(1) / len(Y), 2),
+                                                              round(Y.count(2) / len(Y), 2)))
+
+    print(f"Data sizes: X: {len(X)}, Y: {len(Y)}")
+    X, X_test, Y, y_test = train_test_split(X, Y, test_size=0.2, stratify=Y)
+    print("ratios of labels in the test set are {} : {} ".format(round(y_test.count(0) / len(y_test), 2),
+                                                                 round(y_test.count(1) / len(y_test), 2)))
+
+    split_dict = save_test_set(os.path.join(os.getcwd(), 'saved_test_sets'), exp_name, X, X_test, Y, y_test)
+    return X, X_test, Y, y_test
+
+def load_data(test_set_path):
+
+    split_dict = load_test_set(test_set_path)
+    print(split_dict.keys())
+    X = split_dict['X']
+    Y = split_dict['Y']
+    X_test = split_dict['X_test']
+    y_test = split_dict['y_test']
+
+    print(f"Data sizes: X: {len(X)}, Y: {len(Y)}, test_images: {len(X_test)}, test_labels: {len(y_test)}")
+
+    print(
+        "ratios of labels in the data set are {} {}".format(round(Y.count(0) / len(Y), 2),
+                                                            round(Y.count(1) / len(Y), 2)))
+    print(
+        "ratios of labels in the test set are {} : {}".format(round(y_test.count(0) / len(y_test), 2),
+                                                              round(y_test.count(1) / len(y_test), 2)))
+    return X, Y, X_test, y_test
 def save_test_set(path, exp_name, X, X_test, Y, y_test):
     today = dt.today()
     date = today.strftime("%b-%d-%Y")
@@ -323,25 +402,19 @@ def load_test_set(split_save_path):
 
     return split_dict
 
-
-import tensorflow as tf  # version 2.5
-from tensorflow.keras import layers
-from tensorflow.keras import regularizers
-from tensorflow.keras.layers import LeakyReLU, Softmax
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, SeparableConv2D
-from tensorflow.keras.layers import Dense, Flatten, Dropout, Reshape, Activation
-from tensorflow.keras.layers import InputLayer, Input
-from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras.layers import LSTM
-from tensorflow.keras.optimizers import Adam, Adagrad, Adadelta, Adamax, SGD, Ftrl, Nadam, RMSprop
-from tensorflow.keras.callbacks import TensorBoard
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import backend as K
-from tensorflow.keras import regularizers
-from tensorflow.keras import Sequential
-from datetime import date as dt
-
+def convert_RGB(X, X_test):
+    print("converting to RGB")
+    for i in range(0, len(X)):
+        X[i] = Image.fromarray(X[i])
+        X[i] = X[i].convert("RGB")
+        X[i] = np.array(X[i])
+        print("x shape is {}".format(X[i].shape))
+    for i in range(0, len(X_test)):
+        X_test[i] = Image.fromarray(X_test[i])
+        X_test[i] = X_test[i].convert("RGB")
+        X_test[i] = np.array(X_test[i])
+        print("x test shape is {}".format(X_test[i].shape))
+    return X, X_test
 
 def visualise_aug(X_train_aug, y_train_aug):
     for i in range(0, 36):
@@ -373,6 +446,7 @@ def reshape_and_normalize_TC(X, Y, nb_classes):
     # convert class vectors to binary class matrices with one-hot encoding
 
     return X_train, Y_train, x_test, y_test
+
 
 def reshape_and_normalize(X, Y, nb_classes):
     X = np.array(X).reshape(-1, 200, 200, 1)  # Array containing every pixel as an index (1D array - 40,000 long)
@@ -406,39 +480,38 @@ def reshape_and_normalize(X, Y, nb_classes):
     Y_train = to_categorical(Y_train, nb_classes)
     return X_train, Y_train
 
+
 def fit_k_means(PCA_components, Y_train, number_of_clusters):
+    kmeans = KMeans(n_clusters=number_of_clusters, init='k-means++', max_iter=300, n_init=10, random_state=0)
+    kmeans.fit(PCA_components)
+    k_means_labels = kmeans.labels_  # List of labels of each dataset
 
-  kmeans = KMeans(n_clusters=number_of_clusters, init ='k-means++', max_iter=300, n_init=10,random_state=0)
-  kmeans.fit(PCA_components)
-  k_means_labels = kmeans.labels_ #List of labels of each dataset
+    unique_labels = len(np.unique(k_means_labels))
 
-  unique_labels = len(np.unique(k_means_labels))
+    # 2D matrix  for an array of indexes of the given label
+    cluster_index = [[] for i in range(unique_labels)]
+    for i, label in enumerate(k_means_labels, 0):
+        for n in range(unique_labels):
 
-  #2D matrix  for an array of indexes of the given label
-  cluster_index= [[] for i in range(unique_labels)]
-  for i, label in enumerate(k_means_labels,0):
-      for n in range(unique_labels):
+            if label == n:
+                cluster_index[n].append(i)
+            else:
+                continue
+    Y_clust = [[] for i in range(unique_labels)]
+    for n in range(unique_labels):
+        Y_clust[n] = Y_train[
+            cluster_index[n]]  # Y_clust[0] contains array of "correct" category from y_train for the cluster_index[0]
+        assert (len(Y_clust[n]) == len(cluster_index[n]))  # dimension confirmation
 
-          if label == n:
-              cluster_index[n].append(i)
-          else:
-              continue
-  Y_clust = [[] for i in range(unique_labels)]
-  for n in range(unique_labels):
-
-      Y_clust[n] = Y_train[cluster_index[n]] #Y_clust[0] contains array of "correct" category from y_train for the cluster_index[0]
-      assert(len(Y_clust[n]) == len(cluster_index[n])) #dimension confirmation
-
-
-  for i in range(0, len(Y_clust)):
-    for j in range(0, len(Y_clust[i])):
-      if Y_clust[i][j][0] != 0.0:
-        Y_clust[i][j][0] = 1.0
-      elif Y_clust[i][j][1] != 0.0:
-        Y_clust[i][j][1] = 2.0
-      elif Y_clust[i][j][2] != 0.0:
-        Y_clust[i][j][2] = 3.0
-  return kmeans, k_means_labels, Y_clust, unique_labels
+    for i in range(0, len(Y_clust)):
+        for j in range(0, len(Y_clust[i])):
+            if Y_clust[i][j][0] != 0.0:
+                Y_clust[i][j][0] = 1.0
+            elif Y_clust[i][j][1] != 0.0:
+                Y_clust[i][j][1] = 2.0
+            elif Y_clust[i][j][2] != 0.0:
+                Y_clust[i][j][2] = 3.0
+    return kmeans, k_means_labels, Y_clust, unique_labels
 
 
 def fit_PCA(X_train, n_components):
@@ -456,7 +529,8 @@ def fit_PCA(X_train, n_components):
     return pca, pca_fit, scores_pca
 
 
-def train_traditional_cf_model(train, val, train_label, val_label, name, results, hyperparams, i, model=None, limb = False, lr=0.00001, lmbd=0.0001):
+def train_traditional_cf_model(train, val, train_label, val_label, name, results, hyperparams, i, model=None,
+                               limb=False, lr=0.00001, lmbd=0.0001):
     param_grid = {'C': [0.1, 1, 10, 100], 'gamma': [0.0001, 0.001, 0.1, 1], 'kernel': ['rbf', 'poly']}  # params for SVM
     print("type of train {}".format(type(train)))
     print("type of val {}".format(type(val)))
@@ -490,19 +564,19 @@ def train_traditional_cf_model(train, val, train_label, val_label, name, results
 
     #
     if svector:
-        svc=svm.SVC(probability=True, verbose=1)
-        model=GridSearchCV(svc,param_grid)
+        svc = svm.SVC(probability=True, verbose=1)
+        model = GridSearchCV(svc, param_grid)
 
     if knn:
         model = KNeighborsClassifier(n_neighbors=3)
     model.fit(reshaped_train,
-                        train_label)
-    y_pred=model.predict(reshaped_val)
+              train_label)
+    y_pred = model.predict(reshaped_val)
     valaccs.append(metrics.accuracy_score(val_label, y_pred))
 
 
-def train_model(train, val, train_label, val_label, X_test, Y_test, name, results, hyperparams, i, model=None, limb = False, lr=0.00001, lmbd=0.0001):
-
+def train_model(train, val, train_label, val_label, X_test, Y_test, name, results, hyperparams, i, model=None,
+                limb=False, lr=0.00001, lmbd=0.0001):
     print("type of train {}".format(type(train)))
     print("type of val {}".format(type(val)))
     print("len of train {}".format(len(train)))
@@ -600,13 +674,11 @@ def train_model(train, val, train_label, val_label, X_test, Y_test, name, result
     results["val_accuracies"].append((round(max(val_acc) * 100, 1)))
     results["val_losses"].append((round(min(val_loss) * 100, 1)))
 
-
     hyperparams["configuration"].append(model.get_config())
     hyperparams["loss_func"].append(model.loss)
     hyperparams["optimizer"].append(model.optimizer)
     hyperparams["learning_rate"].append(lr)
     hyperparams["lambda"].append(lmbd)
-
 
     today = dt.today()
     date = today.strftime("%b-%d-%Y")
@@ -625,6 +697,38 @@ def train_model(train, val, train_label, val_label, X_test, Y_test, name, result
 
     del model
 
+    return results, hyperparams
+
+
+def finetune_resnet_inception(X_train_aug, X_val_aug, y_train_aug, y_val_aug, X_test, y_test,
+                              exp_name, results, hyperparams, model, pretrained=True, freeze=True, resnet=True, inception=False):
+    if resnet and not inception:
+        for i in range(0, len(X_train_aug)):
+            K.clear_session()
+            tf.compat.v1.reset_default_graph()
+            gc.collect()
+
+            print("training_resnet50_model_{}".format(i))
+            print("train shape before sending to resnet {}".format(np.array(X_train_aug[i]).shape))
+            results = train_model_resnet50(X_train_aug[i], X_val_aug[i], y_train_aug[i], y_val_aug[i], X_test, y_test,
+                                           exp_name, results, hyperparams, i, model=None, pretrained=False, freeze=True)
+            k.clear_session()
+            tf.compat.v1.reset_default_graph()
+            gc.collect()
+
+    elif inception and not resnet:
+        for i in range(0, len(X_train_aug)):
+            K.clear_session()
+            tf.compat.v1.reset_default_graph()
+            gc.collect()
+
+            print("training_InceptionV3_model_{}".format(i))
+            print("train shape before sending to inception {}".format(np.array(X_train_aug[i]).shape))
+            results = train_model_inception(X_train_aug[i], X_val_aug[i], y_train_aug[i], y_val_aug[i], X_test, y_test,
+                                            exp_name, results, hyperparams, i, model=None, pretrained=False)
+            k.clear_session()
+            tf.compat.v1.reset_default_graph()
+            gc.collect()
     return results, hyperparams
 
 
@@ -679,7 +783,7 @@ def train_model_resnet50(train, val, train_label, val_label, X_test, Y_test, nam
                         y=train_label,
                         epochs=epochs,
                         batch_size=32,
-                        validation_data=(reshaped_val, val_label), verbose = 2, callbacks=[earlyStop])
+                        validation_data=(reshaped_val, val_label), verbose=2, callbacks=[earlyStop])
 
     acc = history.history['accuracy']
     val_acc = history.history['val_accuracy']
@@ -711,11 +815,11 @@ def train_model_resnet50(train, val, train_label, val_label, X_test, Y_test, nam
 
     return results
 
+
 def train_model_inception(train, val, train_label, val_label, X_test, Y_test, name, results, hyperparams, i, model=None,
-                         pretrained=False):
+                          pretrained=False):
     np_train = np.array(train) / 255
     np_val = np.array(val) / 255
-
 
     print("train shape before preprocess {}".format(np_train.shape))
     reshaped_train = preprocess_input(np_train)
@@ -736,8 +840,9 @@ def train_model_inception(train, val, train_label, val_label, X_test, Y_test, na
         print('using pretrained model')
     else:
         print('building new inception model')
-        inception_model = InceptionV3(include_top=False, weights='imagenet', input_tensor=None, input_shape=(200, 200, 3),
-                                  pooling=None)
+        inception_model = InceptionV3(include_top=False, weights='imagenet', input_tensor=None,
+                                      input_shape=(200, 200, 3),
+                                      pooling=None)
         flattened_output = tf.keras.layers.Flatten()(inception_model.output)
         fc_classification_layer = tf.keras.layers.Dense(2, activation='softmax')(flattened_output)
         model = tf.keras.models.Model(inputs=inception_model.input, outputs=fc_classification_layer)
@@ -751,7 +856,7 @@ def train_model_inception(train, val, train_label, val_label, X_test, Y_test, na
                         y=train_label,
                         epochs=epochs,
                         batch_size=32,
-                        validation_data=(reshaped_val, val_label), verbose = 2, callbacks=[earlyStop])
+                        validation_data=(reshaped_val, val_label), verbose=2, callbacks=[earlyStop])
 
     acc = history.history['accuracy']
     val_acc = history.history['val_accuracy']
@@ -783,8 +888,9 @@ def train_model_inception(train, val, train_label, val_label, X_test, Y_test, na
 
     return results
 
+
 def train_model_vgg16(train, val, train_label, val_label, X_test, Y_test, name, results, hyperparams, i, model=None,
-                         pretrained=False):
+                      pretrained=False):
     np_train = np.array(train) / 255
     np_val = np.array(val) / 255
 
@@ -813,7 +919,7 @@ def train_model_vgg16(train, val, train_label, val_label, X_test, Y_test, name, 
     else:
         print('building new vgg16 model')
         inception_model = VGG16(include_top=False, weights='imagenet', input_tensor=None, input_shape=(200, 200, 3),
-                                  pooling=None)
+                                pooling=None)
         flattened_output = tf.keras.layers.Flatten()(inception_model.output)
         fc_classification_layer = tf.keras.layers.Dense(2, activation='softmax')(flattened_output)
         model = tf.keras.models.Model(inputs=inception_model.input, outputs=fc_classification_layer)
@@ -827,7 +933,7 @@ def train_model_vgg16(train, val, train_label, val_label, X_test, Y_test, name, 
                         y=train_label,
                         epochs=epochs,
                         batch_size=32,
-                        validation_data=(reshaped_val, val_label), verbose = 2, callbacks=[earlyStop])
+                        validation_data=(reshaped_val, val_label), verbose=2, callbacks=[earlyStop])
 
     acc = history.history['accuracy']
     val_acc = history.history['val_accuracy']
@@ -859,6 +965,7 @@ def train_model_vgg16(train, val, train_label, val_label, X_test, Y_test, name, 
 
     return results
 
+
 def kfoldcv(X, Y, k):
     kfold = KFold(n_splits=k)
     kfold.get_n_splits(X)
@@ -886,7 +993,7 @@ def kfoldcv(X, Y, k):
     return X_train, y_train, X_val, y_val
 
 
-def aug_data_2(X_train, y_train, X_val=None, y_val=None, X_val_bool=False):
+def aug_data_haralick(X_train, y_train, X_val=None, y_val=None, X_val_bool=False):
     X_train_aug = []
     X_val_aug = []
     y_train_aug = []
@@ -927,16 +1034,18 @@ def aug_data_2(X_train, y_train, X_val=None, y_val=None, X_val_bool=False):
     else:
         return X_train_aug, y_train_aug
 
+
 def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, shear=False, gblur=False, crop=False,
-                 randcomb=False, mobius=False, allcomb_sparse=False, allcomb_full=False, resnet=False, inception=False, limb=False):
-    print("resnet is "+ str(resnet))
+                 randcomb=False, mobius=False, allcomb_sparse=False, allcomb_full=False, resnet=False, inception=False,
+                 limb=False):
+    print("resnet is " + str(resnet))
     print("inception is " + str(inception))
     X_val_aug = []
     X_train_aug = []
     y_train_aug = []
     y_val_aug = []
-    X_train = np.array(X_train)
-    X_val = np.array(X_val)
+    X_train = np.array(X_train, dtype=object)
+    X_val = np.array(X_val, dtype=object)
 
     # Mode can be chosen from 'reflect’, ‘constant’, ‘nearest’, ‘mirror’, ‘wrap’
     mode = 'constant'
@@ -959,7 +1068,7 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
             if mobius:
                 # M must be >1
                 # The smaller M is, the more "normal" the output looks
-                M = np.linspace(1.1,1.2, 20)
+                M = np.linspace(1.1, 1.2, 20)
                 M = np.random.choice(M)
                 print(M)
 
@@ -1009,7 +1118,6 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                 #     feature = seq(image=X_train[i][j])
 
                 if allcomb_full:
-
                     cutout = iaa.Cutout(nb_iterations=(1, 3),
                                         size=0.2)
                     cutout_feature = cutout(image=X_train[i][j])
@@ -1029,42 +1137,33 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                     rotated_features.append(gblur_feature)
                     rotated_labels.append(y_train[i][j])
 
-
                 if limb:
-
                     flip = iaa.Fliplr(1.0)
                     flip_feature = flip(image=X_train[i][j])
 
                     rotated_features.append(flip_feature)
                     rotated_labels.append(y_train[i][j])
 
-
                 rotate = iaa.geometric.Affine(rotate=angle)  # set up augmenter
                 feature = rotate(image=X_train[i][j])  # rotate each image 36 times
                 feature = Image.fromarray(feature)
                 if not resnet and not inception:
-
                     feature = feature.convert("L")
                 feature = np.array(feature)
                 rotated_features.append(feature)  # append to 36 rotated images to temp
                 rotated_labels.append(y_train[i][j])
 
-
-
         X_train_aug.append(
             rotated_features)  # when finished all j append 149 long list of 36 long list of rotated imgs, proceed to next i
         y_train_aug.append(rotated_labels)
 
-
-
         print("number of training images post augmentation {}".format(len(X_train_aug[0])))
 
-
         if mobius:
-
             assert len(X_train_aug[0]) == (len(X_train[0]) * len(
                 np.arange(0, 360,
-                          10)) + len(X_train[0])), "X_train_aug is not equal to X_train multiplied by the number of transformations"
+                          10)) + len(
+                X_train[0])), "X_train_aug is not equal to X_train multiplied by the number of transformations"
 
         if allcomb_full:
             if limb:
@@ -1073,12 +1172,13 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                               10))) * 5, "X_train_aug is not equal to X_train multiplied by the number of transformations"
             else:
 
-                assert len(X_train_aug[0]) == len(X_train[0]) * (len(np.arange(0, 360, 10)) * 4), "X_train_aug is not equal to X_train multiplied by the number of transformations"
+                assert len(X_train_aug[0]) == len(X_train[0]) * (len(np.arange(0, 360,
+                                                                               10)) * 4), "X_train_aug is not equal to X_train multiplied by the number of transformations"
 
         if limb and (not allcomb_full):
             assert len(X_train_aug[0]) == (len(X_train[0]) * len(
                 np.arange(0, 360,
-                          10)))*2, "X_train_aug is not equal to X_train multiplied by the number of transformations"
+                          10))) * 2, "X_train_aug is not equal to X_train multiplied by the number of transformations"
 
         elif not allcomb_full:
 
@@ -1097,7 +1197,7 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
             if mobius:
                 # M must be >1
                 # The smaller M is, the more "normal" the output looks
-                M = np.linspace(1.1,1.2, 20)
+                M = np.linspace(1.1, 1.2, 20)
                 M = np.random.choice(M)
                 print(M)
 
@@ -1136,7 +1236,6 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                     feature = seq(image=X_val[i][j])
 
                 if allcomb_full:
-
                     cutout = iaa.Cutout(nb_iterations=(1, 3),
                                         size=0.2)  #
                     cutout_feature = cutout(image=X_val[i][j])
@@ -1165,7 +1264,6 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                 #     rotated_labels.append(y_val[i][j])
 
                 if limb:
-
                     flip = iaa.Fliplr(0.5)
                     flip_feature = flip(image=X_val[i][j])
 
@@ -1183,7 +1281,6 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
                 rotated_features.append(feature)  # append to 36 rotated images to temp
                 rotated_labels.append(y_val[i][j])
 
-
         X_val_aug.append(
             rotated_features)  # when finished all j append 149 long list of 36 long list of rotated imgs, proceed to next i
         y_val_aug.append(rotated_labels)
@@ -1199,7 +1296,7 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
             # print("X_val_aug len is {}".format(len(X_val_aug[0])))
             assert len(X_val_aug[0]) == (len(X_val[0]) * len(
                 np.arange(0, 360,
-                          10)))*2, "X_val_aug is not equal to X_val multiplied by the number of transformations"
+                          10))) * 2, "X_val_aug is not equal to X_val multiplied by the number of transformations"
 
         if allcomb_full:
             if limb:
@@ -1215,13 +1312,12 @@ def augment_data(X_train, y_train, X_val, y_val, baseline=False, cutout=False, s
         if limb and (not allcomb_full):
             assert len(X_val_aug[0]) == (len(X_val[0]) * len(
                 np.arange(0, 360,
-                          10)))*2, "X_train_aug is not equal to X_train multiplied by the number of transformations"
+                          10))) * 2, "X_train_aug is not equal to X_train multiplied by the number of transformations"
         else:
             # print("X_val_aug len is {}".format(len(X_val_aug[0])))
             assert len(X_val_aug[0]) == (len(X_val[0]) * len(
                 np.arange(0, 360,
                           10))), "X_val_aug is not equal to X_val multiplied by the number of transformations"
-
 
     # assert len(X_train_aug[0]) == len(X_train[0]) * len(
     #     np.arange(0, 360, 10)), "X_train_aug is not equal to X_train multiplied by the number of transformations"
@@ -1283,16 +1379,6 @@ def augment_data_hd_cutout(X_train, y_train, X_val, y_val, cutout=False, randcom
             y_val_aug.append(y_val[i])
 
     return X_train_aug, X_val_aug, y_train_aug, y_val_aug
-
-
-
-import numpy as np
-from PIL import Image
-import random
-from scipy.ndimage import geometric_transform, map_coordinates
-from numpy import *
-from random import random
-
 
 
 def shift_func(coords, a, b, c, d):
@@ -1388,8 +1474,8 @@ def mobius_fast_interpolation(name, save, image, M, mode, rgb, output_height=Non
     new_image_c1 = new_image_c1.convert("L")
     return new_image, uninterpolated_image
 
-def aug_mobius(X_train, y_train, X_val, y_val, M=5, mode='constant', user_defined=False, rgb=False):
 
+def aug_mobius(X_train, y_train, X_val, y_val, M=5, mode='constant', user_defined=False, rgb=False):
     X_val_aug = []
     X_train_aug = []
     y_train_aug = []
@@ -1406,30 +1492,27 @@ def aug_mobius(X_train, y_train, X_val, y_val, M=5, mode='constant', user_define
         X_train[i] = np.array(X_train[i])  # convert list of images to np.array - seems to be necessary for imgaug
 
         for j in range(0, len(X_train[i])):  # for every image in 149 long list of images 0 -> 149
-                img = X_train[i][j]
+            img = X_train[i][j]
             # do the mobius transforms
-                feature, uninterpolated_feature = mobius_fast_interpolation('example', True, img,
-                                                                            M,
-                                                                            mode=mode, rgb=rgb,
-                                                                            output_height=200,
-                                                                            output_width=200,
-                                                                            user_defined=user_defined,
-                                                                            start_points=start_points,
-                                                                            end_points=end_points)
+            feature, uninterpolated_feature = mobius_fast_interpolation('example', True, img,
+                                                                        M,
+                                                                        mode=mode, rgb=rgb,
+                                                                        output_height=200,
+                                                                        output_width=200,
+                                                                        user_defined=user_defined,
+                                                                        start_points=start_points,
+                                                                        end_points=end_points)
+            feature = np.array(feature)
+            rotated_features.append(feature)
+            rotated_labels.append(y_train[i][j])
+            for angle in np.arange(0, 360, 10):
+                rotate = iaa.geometric.Affine(rotate=angle)  # set up augmenter
+                feature = rotate(image=X_train[i][j])  # rotate each image 36 times
+                feature = Image.fromarray(feature)
+                feature = feature.convert("L")
                 feature = np.array(feature)
-                rotated_features.append(feature)
+                rotated_features.append(feature)  # append to 36 rotated images to temp
                 rotated_labels.append(y_train[i][j])
-                for angle in np.arange(0,360,10):
-                    rotate = iaa.geometric.Affine(rotate=angle)  # set up augmenter
-                    feature = rotate(image=X_train[i][j])  # rotate each image 36 times
-                    feature = Image.fromarray(feature)
-                    feature = feature.convert("L")
-                    feature = np.array(feature)
-                    rotated_features.append(feature)  # append to 36 rotated images to temp
-                    rotated_labels.append(y_train[i][j])
-
-
-
 
         X_train_aug.append(rotated_features)
         y_train_aug.append(rotated_labels)
@@ -1442,16 +1525,16 @@ def aug_mobius(X_train, y_train, X_val, y_val, M=5, mode='constant', user_define
 
         for j in range(0, len(X_val[i])):  # for every image in 149 long list of images 0 -> 149
 
-            #do the mobius transforms
+            # do the mobius transforms
             img = X_val[i][j]
             feature, uninterpolated_feature = mobius_fast_interpolation('example', True, img,
-                                                                      M,
-                                                                      mode = mode, rgb = rgb,
-                                                                      output_height=200,
-                                                                      output_width=200,
-                                                                      user_defined=user_defined,
-                                                                      start_points = start_points,
-                                                                      end_points = end_points)
+                                                                        M,
+                                                                        mode=mode, rgb=rgb,
+                                                                        output_height=200,
+                                                                        output_width=200,
+                                                                        user_defined=user_defined,
+                                                                        start_points=start_points,
+                                                                        end_points=end_points)
             feature = np.array(feature)
             rotated_features_val.append(feature)
             rotated_labels_val.append(y_val[i][j])
@@ -1468,109 +1551,6 @@ def aug_mobius(X_train, y_train, X_val, y_val, M=5, mode='constant', user_define
         X_val_aug.append(rotated_features_val)
         y_val_aug.append(rotated_labels_val)
     return X_train_aug, y_train_aug, X_val_aug, y_val_aug
-
-#
-# def mobius_fast_interpolation(name, save, image, M, mode, output_height=None, output_width=None, user_defined=False,
-#                               start_points=None, end_points=None):
-#     image = np.array(image)
-#     original_image = image
-#     height = image.shape[0]
-#     width = image.shape[1]
-#
-#     # User can pick output size
-#     if output_height == None:
-#         output_height = height
-#     if output_width == None:
-#         output_width = width
-#     if user_defined == True:
-#         # Method one
-#         # You pick starting and ending point
-#         a, b, c, d, original_points, new_points = getabcd_1fix(height, width, start_points, end_points)
-#     else:
-#         # Method two
-#         # Randomly generated starting the ending point
-#         a, b, c, d, original_points, new_points = madmissable_abcd(M, height, width)
-#     e = [complex(0, 0)] * height * width
-#     z = np.array(e).reshape(height, width)
-#     for i in range(0, height):
-#         for j in range(0, width):
-#             z[i, j] = complex(i, j)
-#     i = np.array(list(range(0, height)) * width).reshape(width, height).T
-#     j = np.array(list(range(0, width)) * height).reshape(height, width)
-#
-#     r = ones((output_height, output_width, 3), dtype=uint8) * 255 * 0
-#     w = (a * z + b) / (c * z + d)
-#     first = real(w) * 1
-#     second = imag(w) * 1
-#     first = first.astype(int)
-#     second = second.astype(int)
-#
-#     f1 = first >= 0
-#     f2 = first < output_height
-#     f = f1 & f2
-#     s1 = second >= 0
-#     s2 = second < output_width
-#     s = s1 & s2
-#
-#     combined = s & f
-#
-#     r[first[combined], second[combined], :] = image[i[combined], j[combined], :]
-#
-#     r_interpolated = r.copy()
-#     u = [True] * output_height * output_width
-#     canvas = np.array(u).reshape(output_height, output_width)
-#     canvas[first[combined], second[combined]] = False
-#     converted_empty_index = np.where(canvas == True)
-#     converted_first = converted_empty_index[0]
-#     converted_second = converted_empty_index[1]
-#
-#     new = converted_first.astype(complex)
-#     new.imag = converted_second
-#
-#     ori = (d * new - b) / (-c * new + a)
-#
-#     p = np.hstack([ori.real, ori.real, ori.real])
-#     k = np.hstack([ori.imag, ori.imag, ori.imag])
-#     zero = np.zeros_like(ori.real)
-#     one = np.ones_like(ori.real)
-#     two = np.ones_like(ori.real) * 2
-#     third = np.hstack([zero, one, two])
-#     number_of_interpolated_point = len(one)
-#     e = number_of_interpolated_point
-#     interpolated_value_unfinished = map_coordinates(image, [p, k, third], order=1, mode=mode, cval=0)
-#     t = interpolated_value_unfinished
-#
-#     interpolated_value = np.stack([t[0:e], t[e:2 * e], t[2 * e:]]).T
-#
-#     r_interpolated[converted_first, converted_second, :] = interpolated_value
-#
-#     new_image = Image.fromarray(r_interpolated)
-#     uninterpolated_image = Image.fromarray(r)
-#     new_image = new_image.convert("L")
-#     uninterpolated_image = uninterpolated_image.convert("L")
-#     new_image_arr = np.array(new_image)
-#     uninterpolated_image_arr = np.array(uninterpolated_image)
-#
-#     # fig = figure(figsize=(15, 10), dpi=300)
-#     # subplot(1,3,1)
-#     # title('Original', fontsize = 20)
-#     # axis('off')
-#
-#     # #imshow(original_image)
-#     # subplot(1,3,2)
-#     # title('No interpolation. M = {}'.format(M), fontsize = 20)
-#     # axis('off')
-#     # imshow(r)
-#     # subplot(1,3,3)
-#     # # figure()
-#     # title('With interpolation. M = {}'.format(M), fontsize = 20)
-#     # axis('off')
-#     # imshow(r_interpolated)
-#     # if save:
-#     #   fig.savefig('/content/drive/MyDrive/9. ML project/Figures/mobius_example_{}_{}.png'.format(name, M))
-#
-#     # return new_image, uninterpolated_image
-#     return new_image_arr, uninterpolated_image_arr
 
 
 def getabcd_1fix(height, width, start_points, end_points):

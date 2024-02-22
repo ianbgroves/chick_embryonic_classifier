@@ -59,7 +59,7 @@ else:
         X.append(feature)
         Y.append(label)
 
-X, Y = aug_data_2(X, Y, X_val_bool=False)
+X, Y = aug_data_haralick(X, Y, X_val_bool=False)
 
 def haralick_extraction(image, label):
 
